@@ -5,11 +5,13 @@
 
 using SetFPSLimit_t = void(__fastcall*)(void*, float);
 using PetRenderDataUpdate_t = void(__fastcall*)(void*, void*, float);
+using AudioManagerFMODPreload_t = void(__fastcall*)(void*, void*, bool, bool, bool, bool);
 
 namespace real
 {
 SetFPSLimit_t SetFPSLimit = nullptr;
 PetRenderDataUpdate_t PetRenderData_Update = nullptr;
+AudioManagerFMODPreload_t AudioManagerFMOD_Preload = nullptr;
 } // namespace real
 
 namespace hooked
@@ -26,7 +28,7 @@ void SetFPSLimit(void* this_, float fps)
         real::SetFPSLimit(this_, 60.f);
 }
 
-void PetRenderDataUpdate(void* this_, void* unk2, float val)
+void PetRenderDataUpdate(void* this_, void* unk2, float delta)
 {
     // The game relies on using this for pet movement correction during fps fluctuations. However,
     // this logic only works properly until 60 FPS. So for our high-fps mod, we patch this to force
@@ -34,7 +36,19 @@ void PetRenderDataUpdate(void* this_, void* unk2, float val)
     // again. There are some slight drawbacks to this approach, but it's relatively stable and good
     // enough for vast majority of players.
     *(float*)((uint8_t*)(this_) + 92) = 0.016666668f;
-    real::PetRenderData_Update(this_, unk2, val);
+    real::PetRenderData_Update(this_, unk2, delta);
+}
+
+void AudioManagerFMODPreload(void* this_, void* unk2, bool bLooping, bool bIsMusic,
+                             bool bAddBasePath, bool bForceStreaming)
+{
+    // Current assumption is PC client had streaming disabled because of Seth's attempt to utilize
+    // extra memory resources in order to save performance and cache audio files. However, in
+    // practice, the Growtopia client fails to properly utilize said caching and as such creates an
+    // annoying stutter. This forces every call to AudioManagerFMOD::Preload to use file streaming
+    // to fix said stutter.
+    bForceStreaming = true;
+    real::AudioManagerFMOD_Preload(this_, unk2, bLooping, bIsMusic, bAddBasePath, bForceStreaming);
 }
 
 } // namespace hooked
@@ -99,4 +113,16 @@ void setup()
         return;
     }
     printf("Hooked PetRenderData::Update.\n");
+
+    // Hook AudioManagerFMOD::Preload.
+    ok = hooking::hookFunctionPatternDirect<AudioManagerFMODPreload_t>(
+        "40 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 30 "
+        "FF FF FF 48 81 EC D0 01 00 00 48 C7 44 24 38 FE FF FF FF",
+        hooked::AudioManagerFMODPreload, &real::AudioManagerFMOD_Preload);
+    if (!ok)
+    {
+        std::printf("Failed to hook AudioManagerFMOD::Preload!\n");
+        return;
+    }
+    printf("Hooked AudioManagerFMOD::Preload.\n");
 }
