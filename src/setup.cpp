@@ -1,69 +1,8 @@
+#include "game/game.hpp"
 #include "utils/hooking.hpp"
 #include "utils/memory.hpp"
 #include "utils/pattern.hpp"
 #include <winuser.h>
-
-using SetFPSLimit_t = void(__fastcall*)(void*, float);
-using PetRenderDataUpdate_t = void(__fastcall*)(void*, void*, float);
-using AudioManagerFMODPreload_t = void(__fastcall*)(void*, void*, bool, bool, bool, bool);
-using CreateLogOverlay_t = void(__fastcall*)(float*, float*, bool);
-
-namespace real
-{
-SetFPSLimit_t SetFPSLimit = nullptr;
-PetRenderDataUpdate_t PetRenderData_Update = nullptr;
-AudioManagerFMODPreload_t AudioManagerFMOD_Preload = nullptr;
-CreateLogOverlay_t CreateLogOverlay = nullptr;
-} // namespace real
-
-namespace hooked
-{
-
-void SetFPSLimit(void* this_, float fps)
-{
-    DEVMODE dm = {0};
-    dm.dmSize = sizeof(DEVMODE);
-    // Retrieve primary display refresh rate or fall back to vanilla 60 fps.
-    if (EnumDisplaySettingsA(NULL, ENUM_CURRENT_SETTINGS, &dm))
-        real::SetFPSLimit(this_, static_cast<float>(dm.dmDisplayFrequency));
-    else
-        real::SetFPSLimit(this_, 60.f);
-}
-
-void PetRenderDataUpdate(void* this_, void* unk2, float delta)
-{
-    // The game relies on using this for pet movement correction during fps fluctuations. However,
-    // this logic only works properly until 60 FPS. So for our high-fps mod, we patch this to force
-    // game to always run an update on pets movement, causing them to move smoothly and as expected
-    // again. There are some slight drawbacks to this approach, but it's relatively stable and good
-    // enough for vast majority of players.
-    *(float*)((uint8_t*)(this_) + 92) = 0.016666668f;
-    real::PetRenderData_Update(this_, unk2, delta);
-}
-
-void AudioManagerFMODPreload(void* this_, void* unk2, bool bLooping, bool bIsMusic,
-                             bool bAddBasePath, bool bForceStreaming)
-{
-    // Current assumption is PC client had streaming disabled because of Seth's attempt to utilize
-    // extra memory resources in order to save performance and cache audio files. However, in
-    // practice, the Growtopia client fails to properly utilize said caching and as such creates an
-    // annoying stutter. This forces every call to AudioManagerFMOD::Preload to use file streaming
-    // to fix said stutter.
-    bForceStreaming = true;
-    real::AudioManagerFMOD_Preload(this_, unk2, bLooping, bIsMusic, bAddBasePath, bForceStreaming);
-}
-
-void CreateLogOverlay(float* pos2d, float* size2d, bool unk3)
-{
-    // Readjust the chat overlay size by removing the left-padding and placing it to size2d instead
-    size2d[0] += pos2d[0];
-    size2d[1] += pos2d[1];
-    pos2d[0] = 0.0f;
-    pos2d[1] = 0.0f;
-    real::CreateLogOverlay(pos2d, size2d, unk3);
-}
-
-} // namespace hooked
 
 void waitForGameInit()
 {
@@ -103,22 +42,19 @@ void setup()
 
     bool ok = false;
     // Hook SetFPSLimit.
-    ok = hooking::hookFunctionPatternDirect<SetFPSLimit_t>(
-        "4C 8B DC 48 81 EC D8 00 00 00 48 C7 44 24 20 FE FF FF FF "
-        "48 8B ? ? ? ? ? 48 33 C4 48 89 84 24 C0 00 00 00 0F 57 C0",
-        hooked::SetFPSLimit, &real::SetFPSLimit);
+    ok = hooking::hookFunctionPatternDirect<SetFPSLimit_t>(pattern::SetFPSLimit, hook::SetFPSLimit,
+                                                           &game::SetFPSLimit);
     if (!ok)
     {
         std::printf("Failed to hook SetFPSLimit!\n");
         return;
     }
-    hooked::SetFPSLimit(nullptr, 60.0f);
+    hook::SetFPSLimit(nullptr, 60.0f);
     printf("Hooked SetFPSLimit.\n");
 
     // Hook PetRenderData::Update.
     ok = hooking::hookFunctionPatternDirect<PetRenderDataUpdate_t>(
-        "48 8B C4 48 89 58 10 48 89 68 18 56 57 41 56 48 81 EC A0 00 00 00 0F B7",
-        hooked::PetRenderDataUpdate, &real::PetRenderData_Update);
+        pattern::PetRenderDataUpdate, hook::PetRenderDataUpdate, &game::PetRenderDataUpdate);
     if (!ok)
     {
         std::printf("Failed to hook PetRenderData::Update!\n");
@@ -128,9 +64,8 @@ void setup()
 
     // Hook AudioManagerFMOD::Preload.
     ok = hooking::hookFunctionPatternDirect<AudioManagerFMODPreload_t>(
-        "40 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 30 "
-        "FF FF FF 48 81 EC D0 01 00 00 48 C7 44 24 38 FE FF FF FF",
-        hooked::AudioManagerFMODPreload, &real::AudioManagerFMOD_Preload);
+        pattern::AudioManagerFMODPreload, hook::AudioManagerFMODPreload,
+        &game::AudioManagerFMODPreload);
     if (!ok)
     {
         std::printf("Failed to hook AudioManagerFMOD::Preload!\n");
@@ -141,9 +76,7 @@ void setup()
     // UI modding - Attempt to restore chat to pre-rework state
     // Hook CreateLogOverlay
     ok = hooking::hookFunctionPatternDirect<CreateLogOverlay_t>(
-        "48 8B C4 55 41 54 41 55 41 56 41 57 48 8D A8 E8 FC FF FF "
-        "48 81 EC F0 03 00 00 48 C7 45 A0 FE FF FF FF 48 89 58 08 48",
-        hooked::CreateLogOverlay, &real::CreateLogOverlay);
+        pattern::CreateLogOverlay, hook::CreateLogOverlay, &game::CreateLogOverlay);
     if (!ok)
     {
         std::printf("Failed to hook CreateLogOverlay!\n");

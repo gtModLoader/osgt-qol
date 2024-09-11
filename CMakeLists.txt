@@ -11,6 +11,10 @@ set (SOURCES
     src/dinput8/dinput8.def
     src/utils/pattern.cpp
     src/utils/memory.cpp
+    src/game/hook/SetFPSLimit.cpp
+    src/game/hook/PetRenderDataUpdate.cpp
+    src/game/hook/AudioManagerFMODPreload.cpp
+    src/game/hook/CreateLogOverlay.cpp
 )
 
 set (SOURCES_MH
