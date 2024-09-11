@@ -42,3 +42,10 @@ DECLARE_GAME_FUNCTION_HOOK(CreateLogOverlay,
                            "48 8B C4 55 41 54 41 55 41 56 41 57 48 8D A8 E8 FC FF FF 48 81 EC F0 "
                            "03 00 00 48 C7 45 A0 FE FF FF FF 48 89 58 08 48",
                            __fastcall, void, float*, float*, bool)
+
+// TabComponent::AddTabButton
+DECLARE_GAME_FUNCTION_HOOK(TabComponentAddTabButton,
+                          "48 8B C4 55 56 57 41 54 41 55 41 56 41 57 48 8D A8 28 FF FF FF 48 81 "
+                          "EC A0 01 00 00 48 C7 45 B0 FE FF FF FF 48 89 58 20 0F 29 70 B8 0F 29 "
+                          "78 A8 44 0F 29 48 98 48 8B 05 04 4A 4C 00",
+                          __fastcall, __int64, void*, void*, float*, void*, void*, void*)

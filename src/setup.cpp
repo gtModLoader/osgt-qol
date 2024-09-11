@@ -73,6 +73,17 @@ void setup()
     }
     printf("Hooked AudioManagerFMOD::Preload.\n");
 
+    // Hook TabComponent::AddTabButton.
+    ok = hooking::hookFunctionPatternDirect<TabComponentAddTabButton_t>(
+        pattern::TabComponentAddTabButton, hook::TabComponentAddTabButton,
+        &game::TabComponentAddTabButton);
+    if (!ok)
+    {
+        std::printf("Failed to hook TabComponent::AddTabButton!\n");
+        return;
+    }
+    printf("Hooked TabComponent::AddTabButton.\n");
+
     // UI modding - Attempt to restore chat to pre-rework state
     // Hook CreateLogOverlay
     ok = hooking::hookFunctionPatternDirect<CreateLogOverlay_t>(
@@ -121,6 +132,24 @@ void setup()
     // Nop the call instruction and the movaps instruction after it.
     memory::nop(((uint8_t*)addrMapXCall) + 16, 8);
     printf("Patched out CreateInputChatBar padding.\n");
+
+    // Patch out TabComponent padding in LogTextOffset
+    auto patternLogTextOffsetTabPad = pattern::parseIDA(
+        "76 40 0F BE ? ? ? ? ? F3 0F 2C ? ? ? ? ? 03 C8 29 ? ? ? ? ? F3 0F 10 B3 00 02");
+    if (!patternLogTextOffsetTabPad.has_value())
+    {
+        std::printf("Failed to parse LogTextOffset tab padding pattern!\n");
+        return;
+    }
+    auto addrLogTextOffsetTabPad = memory::find<uint8_t*>(patternLogTextOffsetTabPad.value());
+    if (addrLogTextOffsetTabPad == nullptr)
+    {
+        std::printf("Failed to find LogTextOffset tab padding!\n");
+        return;
+    }
+    // Change JBE to JMP to skip past this function
+    memory::fill(addrLogTextOffsetTabPad, 1, 0xEB);
+    printf("Patched out LogTextOffset tab padding.\n");
 
     // Patch out iPadMapX(45) call in AddMainMenuControls
     patternMapXCall =
@@ -174,4 +203,22 @@ void setup()
     }
     memory::fill(addrSystemMessage, 8, 0);
     printf("Nulled `7[S]`` string.\n");
+
+    // Remove the guild/leaderboards icon from MainMenuControls
+    auto patternGuildIconMargin =
+        pattern::parseIDA("E8 ? ? ? ? F3 0F 58 78 04 F3 0F 58 F7 F3 0F 10");
+    if (!patternGuildIconMargin.has_value())
+    {
+        std::printf("Failed to parse MainMenuControls guild icon margin pattern!\n");
+        return;
+    }
+    auto addrGuildIconMargin = memory::find<uint8_t*>(patternGuildIconMargin.value());
+    if (addrGuildIconMargin == nullptr)
+    {
+        std::printf("Failed to find MainMenuControls guild icon margin address!\n");
+        return;
+    }
+    // Nop the two ADDSS instructions
+    memory::nop(((uint8_t*)addrGuildIconMargin) + 5, 9);
+    printf("Patched out MainMenuControls guild icon margin.\n");
 }

@@ -15,6 +15,7 @@ set (SOURCES
     src/game/hook/PetRenderDataUpdate.cpp
     src/game/hook/AudioManagerFMODPreload.cpp
     src/game/hook/CreateLogOverlay.cpp
+    src/game/hook/TabComponentAddTabButton.cpp
 )
 
 set (SOURCES_MH
