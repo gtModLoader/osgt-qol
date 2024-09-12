@@ -7,15 +7,14 @@ endif()
 
 set (SOURCES
     src/setup.cpp
+    src/game.cpp
+    src/utils.cpp
     src/dinput8/dinput8.cpp
     src/dinput8/dinput8.def
-    src/utils/pattern.cpp
-    src/utils/memory.cpp
-    src/game/hook/SetFPSLimit.cpp
-    src/game/hook/PetRenderDataUpdate.cpp
-    src/game/hook/AudioManagerFMODPreload.cpp
-    src/game/hook/CreateLogOverlay.cpp
-    src/game/hook/TabComponentAddTabButton.cpp
+    src/patches/framerate.cpp
+    src/patches/integrity.cpp
+    src/patches/chat.cpp
+    src/patches/audio.cpp
 )
 
 set (SOURCES_MH
