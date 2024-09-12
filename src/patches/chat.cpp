@@ -37,9 +37,8 @@ class LegacyChatPatch : public game::BasePatch
                                        &real::TabComponentAddTabButton);
 
         // Patch out various iPadMapX(...) calls.
-        // In order: CreateLogOverlay, CreateInputChatBar, AddMainMenuControls.
+        // In order: CreateInputChatBar, AddMainMenuControls, AddMainMenuControls (Large Screen).
         std::vector<iPadMapXCallData> padMapCalls = {
-            {"48 8D 4D 38 E8 ? ? ? ? F3 0F 10 ? ? ? ? ? E8 ? ? ? ? 0F 28 F0", 17, 8},
             {"48 8B C8 E8 ? ? ? ? F3 0F 10 ? ? ? ? ? E8 ? ? ? ? 0F 28 F0 45 0F 57 DB", 16, 8},
             {"41 0F 28 C3 E8 ? ? ? ? F3 0F 10 ? ? ? ? ? E8 ? ? ? ? 44 0F 28 C0", 9, 13},
             {"3D D0 07 00 00 7C 11 F3 0F 10 ? ? ? ? ? E8 ? ? ? ? 44 0F 28 C0 E8", 7, 13}};
@@ -52,8 +51,16 @@ class LegacyChatPatch : public game::BasePatch
                 throw std::runtime_error("Failed to patch iPadMapX call.");
         }
 
-        // Patch out TabComponent padding in LogTextOffset.
+        // Patch out CreateLogOverlay one separately, need to XORPS XMM6 register afterwards.
         auto addr = game.findMemoryPattern<uint8_t*>(
+            "48 8D 4D 38 E8 ? ? ? ? F3 0F 10 ? ? ? ? ? E8 ? ? ? ? 0F 28 F0");
+        if (addr == nullptr)
+            throw std::runtime_error("Failed to find iPadMapX call pattern.");
+        utils::nopMemory(addr + 9, 16);
+        utils::writeMemoryBuffer(reinterpret_cast<uint8_t*>(addr) + 22, {0x0F, 0x57, 0xF6});
+
+        // Patch out TabComponent padding in LogTextOffset.
+        addr = game.findMemoryPattern<uint8_t*>(
             "76 40 0F BE ? ? ? ? ? F3 0F 2C ? ? ? ? ? 03 C8 29 ? ? ? ? ? F3 0F 10 B3 00 02");
         if (addr == nullptr)
             throw std::runtime_error("Failed to find LogTextOffset pattern.");
