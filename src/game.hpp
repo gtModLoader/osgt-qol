@@ -49,6 +49,7 @@ class GameHarness
     void initialize();
 
     // Search game memory for a specific byte pattern. Returns a pointer to the first occurrence.
+    // Throws std::invalid_argument on invalid pattern or std::runtime_error if failed to find.
     template <typename T = void*> T findMemoryPattern(const std::string& pattern);
 
     // Detours function located at target address to function located at detour address. Optionally,
@@ -76,6 +77,10 @@ class GameHarness
     // Applies all patches registered in the patch map. Throws a std::runtime_error if an error
     // occurs while applying a patch.
     void applyAllPatches();
+
+    // Updates game window title to the OSGT-QOL specific format. Usually you want to call this
+    // after the patch applying loop logic.
+    void updateWindowTitle();
 
     GameHarness(GameHarness const&) = delete;
     void operator=(GameHarness const&) = delete;
@@ -130,9 +135,6 @@ template <typename T> T game::GameHarness::findMemoryPattern(const std::string& 
     static_assert(std::is_pointer_v<T>, "T must be a pointer type.");
 
     auto bytes = utils::parsePattern(pattern);
-    if (bytes.empty())
-        return nullptr;
-
     uint8_t* begin = reinterpret_cast<uint8_t*>(baseAddr);
     uint8_t* end = reinterpret_cast<uint8_t*>(baseAddr) + imageSize;
     while (begin < end)
@@ -152,7 +154,7 @@ template <typename T> T game::GameHarness::findMemoryPattern(const std::string& 
             return reinterpret_cast<T>(begin);
         begin++;
     }
-    return nullptr;
+    throw std::runtime_error(std::format("Failed to find pattern '{}'.", pattern));
 }
 
 template <typename F> void game::GameHarness::hookFunction(F target, F detour, F* original)
@@ -160,13 +162,13 @@ template <typename F> void game::GameHarness::hookFunction(F target, F detour, F
     MH_STATUS status = MH_CreateHook(target, detour, reinterpret_cast<void**>(original));
     if (status != MH_OK)
     {
-        auto msg = std::format("Failed to create hook at 0x{:p}: {}", (void*)target,
+        auto msg = std::format("Failed to create hook at 0x{:p} ({})", (void*)target,
                                MH_StatusToString(status));
         throw std::runtime_error(msg);
     }
     if ((status = MH_EnableHook(target)) != MH_OK)
     {
-        auto msg = std::format("Failed to enable hook at 0x{:p}: {}", (void*)target,
+        auto msg = std::format("Failed to enable hook at 0x{:p} ({})", (void*)target,
                                MH_StatusToString(status));
         throw std::runtime_error(msg);
     }

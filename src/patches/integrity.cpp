@@ -8,11 +8,8 @@ class IntegrityPatch : public game::BasePatch
     {
         auto& game = game::GameHarness::get();
         // Patch out CRC integrity check.
-        auto addr = game.findMemoryPattern("00 3B C1 75 ? 85 C9");
-        if (addr == nullptr)
-            throw std::runtime_error("Failed to find integrity check pattern.");
-        if (!utils::nopMemory(reinterpret_cast<uint8_t*>(addr) + 1, 6))
-            throw std::runtime_error("Failed to patch integrity check.");
+        auto addr = game.findMemoryPattern<uint8_t*>("00 3B C1 75 ? 85 C9");
+        utils::nopMemory(addr + 1, 6);
     }
 };
 REGISTER_GAME_PATCH(IntegrityPatch, integrity_bypass);

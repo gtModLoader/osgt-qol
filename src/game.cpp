@@ -61,9 +61,16 @@ void GameHarness::applyAllPatches()
         }
         catch (const std::exception& e)
         {
-            throw std::runtime_error(std::format("Failed to apply patch '{}': {}", name, e.what()));
+            auto msg = std::format("Failed to apply patch {}: {}", name, e.what());
+            throw std::runtime_error(msg);
         }
     }
+}
+
+void GameHarness::updateWindowTitle()
+{
+    std::string newTitle = std::format("Growtopia [OSGT-QOL] - {} patches applied", patches.size());
+    SetWindowTextA(window, newTitle.c_str());
 }
 
 } // namespace game

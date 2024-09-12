@@ -1,6 +1,7 @@
 #include "utils.hpp"
 #include <cstdint>
 #include <sstream>
+#include <stdexcept>
 
 namespace utils
 {
@@ -24,31 +25,29 @@ RawPattern parsePattern(const std::string& pattern)
             catch (...)
             {
                 // Return empty vector in case of an invalid pattern.
-                return {};
+                throw std::invalid_argument("Invalid pattern byte: " + byte);
             }
         }
     }
     return out;
 }
 
-bool writeMemoryBuffer(void* address, const std::vector<uint8_t> data)
+void writeMemoryBuffer(void* address, const std::vector<uint8_t> data)
 {
     DWORD old = 0;
     if (!VirtualProtect(address, data.size(), PAGE_EXECUTE_READWRITE, &old))
-        return false;
+        throw std::runtime_error("Failed to change memory protection.");
     std::memcpy(address, data.data(), data.size());
-    return VirtualProtect(address, data.size(), old, &old);
+    if (!VirtualProtect(address, data.size(), old, &old))
+        throw std::runtime_error("Failed to restore memory protection.");
 }
 
-bool writeMemoryPattern(void* address, const std::string& pattern)
+void writeMemoryPattern(void* address, const std::string& pattern)
 {
     auto bytes = parsePattern(pattern);
-    if (bytes.empty())
-        return false;
-
     DWORD old = 0;
     if (!VirtualProtect(address, bytes.size(), PAGE_EXECUTE_READWRITE, &old))
-        return false;
+        throw std::runtime_error("Failed to change memory protection.");
     // Perform special write that skips wildcard bytes.
     uint8_t* ptr = reinterpret_cast<uint8_t*>(address);
     for (size_t i = 0; i < bytes.size(); i++)
@@ -57,18 +56,20 @@ bool writeMemoryPattern(void* address, const std::string& pattern)
             *ptr = bytes[i].value();
         ptr++;
     }
-    return VirtualProtect(address, bytes.size(), old, &old);
+    if (!VirtualProtect(address, bytes.size(), old, &old))
+        throw std::runtime_error("Failed to restore memory protection.");
 }
 
-bool fillMemory(void* address, size_t size, uint8_t value)
+void fillMemory(void* address, size_t size, uint8_t value)
 {
     DWORD old = 0;
     if (!VirtualProtect(address, size, PAGE_EXECUTE_READWRITE, &old))
-        return false;
+        throw std::runtime_error("Failed to change memory protection.");
     std::memset(address, value, size);
-    return VirtualProtect(address, size, old, &old);
+    if (!VirtualProtect(address, size, old, &old))
+        throw std::runtime_error("Failed to restore memory protection.");
 }
 
-bool nopMemory(void* address, size_t size) { return fillMemory(address, size, 0x90); }
+void nopMemory(void* address, size_t size) { fillMemory(address, size, 0x90); }
 
 } // namespace utils

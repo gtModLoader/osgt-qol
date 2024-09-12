@@ -1,5 +1,7 @@
 #include "game.hpp"
+#include <cstdio>
 
+// Creates a console window.
 void createConsole()
 {
     AllocConsole();
@@ -10,7 +12,11 @@ void createConsole()
 // Entry point.
 void setup()
 {
+#ifndef NDEBUG
+    // Create a console window for debug builds.
     createConsole();
+#endif
+
     auto& game = game::GameHarness::get();
     game.initialize();
     std::printf("Game initialized!\n");
@@ -20,6 +26,15 @@ void setup()
     }
     catch (const std::exception& e)
     {
-        std::printf("Error applying patch: %s\n", e.what());
+#ifndef NDEBUG
+        // Output error to console.
+        std::fprintf(stderr, "%s\n", e.what());
+        return;
+#else
+        // Show error message box and exit.
+        MessageBoxA(nullptr, e.what(), "Error", MB_ICONERROR | MB_OK);
+        ExitProcess(EXIT_FAILURE);
+#endif
     }
+    game.updateWindowTitle();
 }

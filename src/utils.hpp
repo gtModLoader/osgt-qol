@@ -1,5 +1,6 @@
 #pragma once
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -13,24 +14,24 @@ namespace utils
 {
 
 // Parse an IDA-style memory pattern string. Returns a vector of bytes where std::nullopt
-// represents a wildcard byte. In case of an invalid signature, an empty vector is returned.
+// represents a wildcard byte. Throws std::invalid_argument on invalid pattern.
 RawPattern parsePattern(const std::string& pattern);
 
-// Write buffer data to a memory address.
-bool writeMemoryBuffer(void* address, const std::vector<uint8_t> data);
+// Write buffer data to a memory address. Throws std::runtime_error on failure.
+void writeMemoryBuffer(void* address, const std::vector<uint8_t> data);
 
 // Write IDA-style memory pattern to a memory address. The function will jump over wildcard bytes in
-// the pattern.
-bool writeMemoryPattern(void* address, const std::string& pattern);
+// the pattern. Throws std::runtime_error or std::invalid_argument on failure.
+void writeMemoryPattern(void* address, const std::string& pattern);
 
-// Fill a memory region with a specific value.
-bool fillMemory(void* address, size_t size, uint8_t value);
+// Fill a memory region with a specific value. Throws std::runtime_error on failure.
+void fillMemory(void* address, size_t size, uint8_t value);
 
-// Shorthand for fillMemory(address, size, NOP opcode).
-bool nopMemory(void* address, size_t size);
+// Shorthand for fillMemory(address, size, NOP opcode). Throws std::runtime_error on failure.
+void nopMemory(void* address, size_t size);
 
 // Resolve an x64 relative call instruction (E8). The address parameter should point to the desired
-// function call instruction.
+// function call instruction. Throws std::invalid_argument on failure.
 template <typename F> inline F resolveRelativeCall(const void* address);
 
 } // namespace utils
@@ -45,7 +46,7 @@ template <typename F> inline F utils::resolveRelativeCall(const void* address)
                   "F must be a function pointer type.");
     const uint8_t* ptr = reinterpret_cast<const uint8_t*>(address);
     if (ptr == NULL || *ptr != 0xE8)
-        return nullptr;
+        throw std::invalid_argument("Address does not point to an E8 instruction.");
     int32_t offset;
     std::memcpy(&offset, ptr + 1, sizeof(offset));
     // Add 5 because the call address is relative to the next instruction.

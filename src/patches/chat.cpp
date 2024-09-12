@@ -1,6 +1,7 @@
 #include "game.hpp"
 #include "utils.hpp"
 #include <cstddef>
+#include <cstdint>
 
 // CreateLogOverlay
 REGISTER_GAME_FUNCTION(CreateLogOverlay,
@@ -47,11 +48,8 @@ class LegacyChatPatch : public game::BasePatch
             {"3D D0 07 00 00 7C 11 F3 0F 10 ? ? ? ? ? E8 ? ? ? ? 44 0F 28 C0 E8", 7, 13}};
         for (const auto& call : padMapCalls)
         {
-            auto addr = game.findMemoryPattern(call.pattern);
-            if (addr == nullptr)
-                throw std::runtime_error("Failed to find iPadMapX call pattern.");
-            if (!utils::nopMemory(reinterpret_cast<uint8_t*>(addr) + call.offset, call.size))
-                throw std::runtime_error("Failed to patch iPadMapX call.");
+            auto addr = game.findMemoryPattern<uint8_t*>(call.pattern);
+            utils::nopMemory(addr + call.offset, call.size);
         }
 
         // Patch out CreateLogOverlay one separately, need to XORPS XMM6 register afterwards.
@@ -61,10 +59,8 @@ class LegacyChatPatch : public game::BasePatch
         // screen. We need XMM6 to start at 0.0, so we replace the MOVSS with a XORPS.
         auto addr = game.findMemoryPattern<uint8_t*>(
             "48 8D 4D 38 E8 ? ? ? ? F3 0F 10 ? ? ? ? ? E8 ? ? ? ? 0F 28 F0");
-        if (addr == nullptr)
-            throw std::runtime_error("Failed to find iPadMapX call pattern.");
         utils::nopMemory(addr + 9, 16);
-        utils::writeMemoryBuffer(reinterpret_cast<uint8_t*>(addr) + 22, {0x0F, 0x57, 0xF6});
+        utils::writeMemoryPattern(addr + 22, "0F 57 F6");
 
         // Patch out TabComponent padding in LogTextOffset.
         // This is required, because otherwise, even though we patched out tabs from never
@@ -72,28 +68,14 @@ class LegacyChatPatch : public game::BasePatch
         // exists. By changing JBE instruction to a JMP, this resizing logic is always skipped.
         addr = game.findMemoryPattern<uint8_t*>(
             "76 40 0F BE ? ? ? ? ? F3 0F 2C ? ? ? ? ? 03 C8 29 ? ? ? ? ? F3 0F 10 B3 00 02");
-        if (addr == nullptr)
-            throw std::runtime_error("Failed to find LogTextOffset pattern.");
         utils::fillMemory(addr, 1, 0xEB);
-
-        // Remove the guild/leaderboards icon from MainMenuControls.
-        // This patch nops the ADDSS instructions responsible for offsetting the gems counter.
-        // As a result, the gem counter is back on its legacy positioning.
-        addr = game.findMemoryPattern<uint8_t*>("E8 ? ? ? ? F3 0F 58 78 04 F3 0F 58 F7 F3 0F 10");
-        if (addr == nullptr)
-            throw std::runtime_error("Failed to find MainMenuControls pattern.");
-        // Nop the two ADDSS instructions.
-        utils::nopMemory(addr + 5, 9);
 
         // Patch out the "`7[S]``" string.
         // The old chat UI never had any classification for System/World/Private/etc messages,
         // instead it relied on client giving contextual clues by message formatting on what
         // the message type was.
         addr = game.findMemoryPattern<uint8_t*>("60 37 5B 53 5D 20 60 60 00");
-        if (addr == nullptr)
-            throw std::runtime_error("Failed to find `7[S]`` string.");
-        if (!utils::fillMemory(addr, 8, 0))
-            throw std::runtime_error("Failed to null `7[S]`` string.");
+        utils::fillMemory(addr, 8, 0);
     }
 
     static void __fastcall CreateLogOverlay(float* pos2d, float* size2d, bool unk3)
@@ -118,3 +100,18 @@ class LegacyChatPatch : public game::BasePatch
     }
 };
 REGISTER_GAME_PATCH(LegacyChatPatch, enable_legacy_chat);
+
+class NoGuildIconPatch : public game::BasePatch
+{
+    void apply() const override
+    {
+        auto& game = game::GameHarness::get();
+        // Remove the guild/leaderboards icon from MainMenuControls.
+        // This patch nops the ADDSS instructions responsible for offsetting the gems counter.
+        // As a result, the gem counter is back on its legacy positioning.
+        auto addr =
+            game.findMemoryPattern<uint8_t*>("E8 ? ? ? ? F3 0F 58 78 04 F3 0F 58 F7 F3 0F 10");
+        utils::nopMemory(addr + 5, 9);
+    }
+};
+REGISTER_GAME_PATCH(NoGuildIconPatch, no_guild_icon);
