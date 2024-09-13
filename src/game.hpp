@@ -95,6 +95,9 @@ class GameHarness
     // Main game window handle.
     HWND window;
 
+    // Number of patches applied.
+    size_t appliedPatchCount = 0;
+
     // Map of registered game patches.
     std::unordered_map<std::string, BasePatch*> patches;
 

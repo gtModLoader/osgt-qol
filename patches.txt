@@ -1,0 +1,15 @@
+OSGT-QOL patch list file. Remove patches you don't want applied by removing the leading plus (+) or by placing a 
+character in front of it, for example: "-+patch_name". Be careful where you place pluses, though, as it might
+mess with the file parsing process.
+
+Audio stuttering fix (e.g. party blaster stutter).
++audio_stutter_fix
+
+Unlock game framerate to match primary monitor.
++framerate_unlock
+
+Remove chat margin, chat tabs and [S] chat stuff.
++enable_legacy_chat
+ 
+Remove guild icon gap.
++no_guild_icon
