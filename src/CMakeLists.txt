@@ -9,6 +9,7 @@ set (SOURCES_USER_PATCHES
     patch/user/audio.cpp
     patch/user/chat.cpp
     patch/user/framerate.cpp
+    patch/user/net.cpp
     patch/user/render.cpp
 )
 set (SOURCES_CORE_PATCHES

@@ -19,3 +19,6 @@ Adds OSGT-QOL credits section
 
 Changes the main menu weather to Night
 +goodnight_title_screen
+
+Adds a Server Data Endpoint field to Online menu. Defaults to Oldschool Growtopia.
++server_data_switcher

@@ -20,7 +20,7 @@ User patches may be disabled via patches.txt file.
 
 Core Patches:
 - CRC Integrity Check bypass - Required for code modification to work
-- About Menu attribution - Adds credits for the modification & lists loaded in user patches
+- About Menu attribution - Adds credits for the modification & lists all the loaded in user patches
 - Secure Item Manager - scans to-be-downloaded files for path traversal attempts, stopping & warning the user on detection
 
 User Patches:
@@ -29,6 +29,7 @@ User Patches:
 - Legacy Chat patch - Removes the chat update paddings and `[S]` symbols
 - No Guild Icon - Shifts Gem Store margin up to be next to Friends List
 - Good Night Title Screen - Changes the eye-searing sunny weather on title screen to a cozy night weather
+- Server Switcher - You can now connect to various servers without modifying hosts file with this mod.
 
 ## Recommended additions
 When Growtopia switched to using BGFX as its rendering framework, Windows clients started using DirectX9 as opposed to OpenGL. With this transition, several visuals broke.
