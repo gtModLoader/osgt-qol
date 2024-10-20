@@ -22,3 +22,6 @@ Changes the main menu weather to Night
 
 Adds a Server Data Endpoint field to Online menu. Defaults to Oldschool Growtopia.
 +server_data_switcher
+
+Forces the game to place its cache where the game is executed from.
++cache_location_fixer

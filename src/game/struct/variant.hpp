@@ -173,7 +173,8 @@ class Variant
 
     const int32_t& GetINT32() const { return *((int32_t*)m_var); }
 
-    void Set(std::string const& var) {
+    void Set(std::string const& var)
+    {
         m_type = TYPE_STRING;
         m_string = var;
     }

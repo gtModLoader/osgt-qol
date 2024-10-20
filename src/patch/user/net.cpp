@@ -68,6 +68,15 @@ REGISTER_GAME_FUNCTION(SetupTextEntity,
 REGISTER_GAME_FUNCTION(SlideScreen, "48 8B C4 55 56 57 41 54 41 55 41 56 41 57 48 8D 68 98 48 81",
                        __fastcall, void, Entity*, bool, int, int);
 
+// GetApp
+// Returns: App
+REGISTER_GAME_FUNCTION(GetApp, "44 0F 28 F8 E8 ? ? ? ? 48 8B C8 48 8D", __fastcall, void*);
+
+// GetAppCachePath
+// Returns: Game directory string
+REGISTER_GAME_FUNCTION(GetAppCachePath, "40 53 48 83 EC 30 33 C0 48 C7 41 18 0F 00 00 00 48",
+                       __fastcall, std::string);
+
 static std::string serverOverride = "osgt1.cernodile.com";
 class ServerSwitcher : public patch::BasePatch
 {
@@ -105,8 +114,8 @@ class ServerSwitcher : public patch::BasePatch
         game.hookFunctionPatternDirect<HTTPComponentInitAndStart_t>(
             pattern::HTTPComponentInitAndStart, HTTPComponentInitAndStart,
             &real::HTTPComponentInitAndStart);
-        // This function calls HTTPComponent with a dead link, causing it to conflict with InitConnection.
-        // Safer to create a empty detour instead to completely dissolve this issue.
+        // This function calls HTTPComponent with a dead link, causing it to conflict with
+        // InitConnection. Safer to create a empty detour instead to completely dissolve this issue.
         game.hookFunctionPatternDirect<RequestIAPPricesFromHouston_t>(
             pattern::RequestIAPPricesFromHouston, RequestIAPPricesFromHouston,
             &real::RequestIAPPricesFromHouston);
@@ -197,3 +206,48 @@ class ServerSwitcher : public patch::BasePatch
     }
 };
 REGISTER_USER_GAME_PATCH(ServerSwitcher, server_data_switcher);
+
+static std::string cachePath = "";
+class CacheLocationFixer : public patch::BasePatch
+{
+  public:
+    void apply() const override
+    {
+        auto& game = game::GameHarness::get();
+
+        // We need to modify cache string in App
+        auto addr = game.findMemoryPattern<uint8_t*>(pattern::GetApp);
+        real::GetApp = utils::resolveRelativeCall<GetApp_t>(addr + 4);
+        std::string* currentCachePath =
+            reinterpret_cast<std::string*>(reinterpret_cast<uint8_t*>(real::GetApp()) + 4696);
+
+        // Get our current directory
+        TCHAR lpBuffer[MAX_PATH];
+        DWORD dwRet;
+        dwRet = GetCurrentDirectory(MAX_PATH, lpBuffer);
+        if (dwRet == 0)
+        {
+            // If we can't determine the current directory, this patch can't do anything
+            throw std::runtime_error("Failed to get current directory, cannot apply patch safely.");
+            return;
+        }
+        else
+        {
+            // Assign the new cache path value to both App and our static variable
+            currentCachePath->assign(std::string(lpBuffer) + "\\cache/");
+            // Windows doesn't give us a trailing slash. We want to have one in our path variable
+            cachePath.assign(lpBuffer);
+            cachePath.append("\\");
+            // We need to create the directory ourselves or the game will freak out about "no
+            // storage space" when retrieving items.dat
+            CreateDirectoryA(currentCachePath->c_str(), 0);
+        }
+
+        // Hook GetAppCachePath to resolve any directory issues when downloading files to cache
+        game.hookFunctionPatternDirect<GetAppCachePath_t>(pattern::GetAppCachePath, GetAppCachePath,
+                                                          &real::GetAppCachePath);
+    }
+
+    static std::string __fastcall GetAppCachePath() { return cachePath; }
+};
+REGISTER_USER_GAME_PATCH(CacheLocationFixer, cache_location_fixer);
