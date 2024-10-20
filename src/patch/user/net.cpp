@@ -1,4 +1,5 @@
 #include "game/game.hpp"
+#include "game/signatures.hpp"
 #include "patch/patch.hpp"
 
 #include "game/struct/entity.hpp"
@@ -37,12 +38,6 @@ REGISTER_GAME_FUNCTION(
     "48 8B C4 55 41 54 41 55 41 56 41 57 48 8D A8 18 FB FF FF 48 81 EC C0 05 00 00 48 C7 44",
     __fastcall, void, void*);
 
-// GetFontAndScaleToFitThisLinesPerScreenY
-// Params: &fontID, &fontScale, Lines
-REGISTER_GAME_FUNCTION(GetFontAndScaleToFitThisLinesPerScreenY,
-                       "48 89 5C 24 08 57 48 83 EC 50 0F 29 74 24 40 48 8B DA", __fastcall, void,
-                       uint32_t&, float&, float);
-
 // CreateInputTextEntity
 // NOTE: Need to investigate the final 3 strings. They're not there originally in Proton SDK.
 // Returns: Created Entity
@@ -51,26 +46,10 @@ REGISTER_GAME_FUNCTION(CreateInputTextEntity, "48 8B C4 55 41 54 41 55 41 56 41 
                        __fastcall, Entity*, Entity*, std::string, float, float, std::string, float,
                        float, std::string, std::string, std::string);
 
-// CreateTextLabelEntity
-// Returns: Created Entity
-// Params: Parent Entity, Entity Name, X, Y, Text, sizeX, sizeY, ??, ??, ??
-REGISTER_GAME_FUNCTION(CreateTextLabelEntity, "48 8B C4 55 57 41 56 48 8D 68 A9 48 81 EC D0 00",
-                       __fastcall, Entity*, Entity*, std::string, float, float, std::string);
-
-// SetupTextEntity
-// Params: Target Entity, FontID, fontScale
-REGISTER_GAME_FUNCTION(SetupTextEntity,
-                       "48 8B C4 55 57 41 54 41 56 41 57 48 8D 68 A1 48 81 EC E0 00 00 00 48 C7 44",
-                       __fastcall, void, Entity*, uint32_t, float);
-
 // SlideScreen
 // Params: Target Entity, bool (Slide in or out), Transition Time (MS), DelayMS
 REGISTER_GAME_FUNCTION(SlideScreen, "48 8B C4 55 56 57 41 54 41 55 41 56 41 57 48 8D 68 98 48 81",
                        __fastcall, void, Entity*, bool, int, int);
-
-// GetApp
-// Returns: App
-REGISTER_GAME_FUNCTION(GetApp, "44 0F 28 F8 E8 ? ? ? ? 48 8B C8 48 8D", __fastcall, void*);
 
 // GetAppCachePath
 // Returns: Game directory string

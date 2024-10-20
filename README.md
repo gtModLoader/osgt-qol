@@ -25,12 +25,13 @@ Core Patches:
 
 User Patches:
 - Framerate Unlock patch - Adjusts the game's framerate limit to match the users display refresh rate. Additionally fixes some visuals caused by higher FPS
-- Audio stuttering patch - Forces the game to stream all audio files from disk rather than try load in memory
+- Audio stuttering patch - Forces the game to stream all audio files from disk rather than try load in memory. Playback from memory is broken on Proton's AudioManager FMOD backend
 - Legacy Chat patch - Removes the chat update paddings, chat tabs and `[S]` symbols
 - No Guild Icon - Shifts Gem Store margin up to be next to Friends List
 - Good Night Title Screen - Changes the eye-searing sunny weather on title screen to a cozy night weather
 - Server Switcher - You can now connect to various servers without modifying hosts file with this mod
 - Cache Location Fixer - Binds game's cache folder to the same folder game installation is on. Useful for people that have multiple Growtopia installations. **NOTE:** Your save.dat is still shared between other installations
+- Bubble Opacity Slider - Backport of the modern client bubble opacity feature
 
 ## Recommended additions
 When Growtopia switched to using BGFX as its rendering framework, Windows clients started using DirectX9 as opposed to OpenGL. With this transition, several visuals broke.

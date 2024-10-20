@@ -25,3 +25,6 @@ Adds a Server Data Endpoint field to Online menu. Defaults to Oldschool Growtopi
 
 Forces the game to place its cache where the game is executed from.
 +cache_location_fixer
+
+Backports the Bubble Opacity slider and feature.
++bubble_opacity_backport

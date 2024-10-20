@@ -16,6 +16,32 @@ class Entity
                 return ent;
         return nullptr;
     }
+    void GetEntitiesByName(std::vector<Entity*>* pEnts, std::string name)
+    {
+        if (m_bTaggedForDeletion)
+            return;
+        if (name == m_name)
+            pEnts->push_back(this);
+
+        for (const auto& ent : m_children)
+        {
+            ent->GetEntitiesByName(pEnts, name);
+        }
+    }
+    void GetEntitiesByName(std::vector<Entity*>* pEnts, std::string name, uint32_t depth)
+    {
+        if (m_bTaggedForDeletion)
+            return;
+        if (name == m_name)
+            pEnts->push_back(this);
+        if (depth == 0)
+            return;
+
+        for (const auto& ent : m_children)
+        {
+            ent->GetEntitiesByName(pEnts, name, depth - 1);
+        }
+    }
     EntityComponent* GetComponentByName(std::string key)
     {
         for (const auto& comp : m_components)
@@ -63,6 +89,7 @@ class Entity
         }
 
         printf("%s\n", us.c_str());
+        m_sharedDB.Print();
 
         for (auto& ent : m_children)
         {

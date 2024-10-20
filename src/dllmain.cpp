@@ -18,11 +18,13 @@ void setup()
 
     auto& game = game::GameHarness::get();
     auto& patchMgr = patch::PatchManager::get();
+    auto& optionsMgr = game::OptionsManager::get();
     try
     {
         // Initialize game harness and apply patches.
         game.initialize();
         game.setWindowVisible(false);
+        optionsMgr.initialize();
         patchMgr.applyPatchesFromFile("patches.txt");
         game.setWindowTitle("Growtopia [OSGT-QOL]");
         game.setWindowVisible(true);

@@ -1,4 +1,5 @@
 #include "game/game.hpp"
+#include "game/signatures.hpp"
 #include "game/struct/entity.hpp"
 #include "patch/patch.hpp"
 #include <format>
@@ -7,11 +8,6 @@
 REGISTER_GAME_FUNCTION(AboutMenuAddScrollContent,
                        "48 8B C4 55 41 56 41 57 48 8D A8 F8 FB FF FF 48 81 EC F0 04", __fastcall,
                        void, Entity*);
-
-REGISTER_GAME_FUNCTION(ResizeScrollBounds,
-                       "48 8B C4 55 48 8D 68 A1 48 81 EC D0 00 00 00 48 C7 45 A7 FE FF FF FF 48 89 "
-                       "58 10 48 89 70 18 48 89 78",
-                       __fastcall, void, VariantList*);
 
 REGISTER_GAME_FUNCTION(SetTextEntity,
                        "48 8B C4 55 57 41 56 48 8D 68 A1 48 81 EC B0 00 00 00 48 C7 45 B7 FE FF FF "

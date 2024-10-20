@@ -276,7 +276,6 @@ class Variant
         return "Unknown";
     }
 
-  private:
     void SetDefaults()
     {
         m_type = TYPE_UNUSED;

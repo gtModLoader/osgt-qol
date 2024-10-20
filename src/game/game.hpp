@@ -83,6 +83,51 @@ class GameHarness
     GameHarness() = default;
 };
 
+// Responsible for providing a stable API for patches to add in-game options with
+class OptionsManager
+{
+  public:
+    enum GameOptionType : uint8_t
+    {
+        OPTION_SLIDER,
+        OPTION_CHECKBOX
+    };
+    struct GameOption
+    {
+        OptionsManager::GameOptionType type;
+        std::string varName;
+        std::string displayName;
+    };
+    // Get OptionsManager instance
+    static OptionsManager& get();
+
+    // Initialize OptionsManager. This has to be invoked after GameHarness has finished
+    // initialization and the game window has been hidden for patching.
+    // This will resolve and hook all the functions needed to provide an API for patches to create
+    // their own options with.
+    void initialize();
+
+    // Adds a slider option to end of GameOptions list.
+    // varName is points to a variable in save.dat.
+    // displayName is the string visible in middle of a slider option.
+    void addSliderOption(std::string varName, std::string displayName)
+    {
+        options.push_back(GameOption(OPTION_SLIDER, varName, displayName));
+    }
+
+    // All of the custom options we have made are stored here.
+    std::vector<GameOption> options;
+
+  private:
+    // Helper functions called during the hook to render our options.
+    static void renderSlider(OptionsManager::GameOption& optionDef, void* pEntPtr, float vPosX,
+                             float& vPosY);
+
+    // Fastcalls used in hooks
+    static void __fastcall OptionsMenuAddContent(void* pEnt, void* unk2, void* unk3, void* unk4);
+    static void __fastcall OptionsMenuOnSelect(void* pVList);
+};
+
 } // namespace game
 
 ///////////////////////////////////

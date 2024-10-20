@@ -1,7 +1,12 @@
 #include "game/game.hpp"
+#include "game/signatures.hpp"
+#include "game/struct/component.hpp"
+#include "game/struct/variant.hpp"
 #include "patch/patch.hpp"
 
 #include "game/struct/entity.hpp"
+#include "game/struct/renderutils.hpp"
+#include "game/struct/rtrect.hpp"
 #include "utils/utils.hpp"
 
 // BackgroundNight::BackgroundNight
@@ -28,12 +33,10 @@ REGISTER_GAME_FUNCTION(
     "48 8B C4 55 57 41 54 41 56 41 57 48 8D A8 E8 F8 FF FF 48 81 EC F0 07 00 00 48 C7 85 80 01",
     __fastcall, void, Entity*, bool);
 
-// GetEntityRoot
-REGISTER_GAME_FUNCTION(GetEntityRoot,
-                       "E8 ? ? ? ? E8 ? ? ? ? 48 8B C8 33 D2 E8 ? ? ? ? 48 8B 4D F8 48 33 CC E8 ? "
-                       "? ? ? 4C 8D 9C 24 80 00 00 00 49 8B 5B 28",
-                       __fastcall, Entity*);
-
+// DrawFilledBitmapRect
+REGISTER_GAME_FUNCTION(DrawFilledBitmapRect,
+                       "48 83 EC 48 66 0F 6E 01 66 0F 6E 49 04 0F B6 44 24 70", __fastcall, void,
+                       rtRectf&, uint32_t, uint32_t, void*, bool);
 
 class GoodNightTitleScreen : public patch::BasePatch
 {
@@ -88,3 +91,45 @@ class GoodNightTitleScreen : public patch::BasePatch
     }
 };
 REGISTER_USER_GAME_PATCH(GoodNightTitleScreen, goodnight_title_screen);
+
+class BubbleOpacityBackport : public patch::BasePatch
+{
+  public:
+    void apply() const override
+    {
+        auto& game = game::GameHarness::get();
+        // Retrieve needed functions.
+        real::GetApp = utils::resolveRelativeCall<GetApp_t>(
+            game.findMemoryPattern<uint8_t*>(pattern::GetApp) + 4);
+        real::AppGetVar = utils::resolveRelativeCall<AppGetVar_t>(
+            game.findMemoryPattern<uint8_t*>(pattern::AppGetVar));
+
+        // Bubble opacity is a vanilla feature, albeit from future version, it should go in save.dat
+        Variant* pVariant = real::AppGetVar(real::GetApp(), "speech_bubble_opacity");
+        if (pVariant->GetType() != Variant::TYPE_FLOAT)
+        {
+            pVariant->Set(1.00f);
+        }
+
+        // Add the slider back into options. Normally it's between the music/sfx/gfx sliders, but
+        // it'd be too messy to ram it between them. OptionsManager will move it to dedicated
+        // "OSGT-QOL Options" area.
+        auto& optionsMgr = game::OptionsManager::get();
+        optionsMgr.addSliderOption("speech_bubble_opacity", "Bubble Opacity");
+
+        // Hook
+        game.hookFunctionPatternDirect<DrawFilledBitmapRect_t>(
+            pattern::DrawFilledBitmapRect, DrawFilledBitmapRect, &real::DrawFilledBitmapRect);
+    }
+
+    static void __fastcall DrawFilledBitmapRect(rtRectf& r, uint32_t middleColor,
+                                                uint32_t borderColor, void* pSurf,
+                                                bool bFillMiddleCloserToEdges)
+    {
+        float opacity = real::AppGetVar(real::GetApp(), "speech_bubble_opacity")->GetFloat();
+        middleColor = ModAlpha(middleColor, (((float)GET_ALPHA(middleColor)) / 255.0f) * opacity);
+        borderColor = ModAlpha(borderColor, (((float)GET_ALPHA(borderColor)) / 255.0f) * opacity);
+        real::DrawFilledBitmapRect(r, middleColor, borderColor, pSurf, bFillMiddleCloserToEdges);
+    }
+};
+REGISTER_USER_GAME_PATCH(BubbleOpacityBackport, bubble_opacity_backport);
