@@ -26,10 +26,13 @@ REGISTER_GAME_FUNCTION(
 
 // CreateCheckbox
 // Again with trailing strings that aren't there in Proton.
-REGISTER_GAME_FUNCTION(CreateCheckBox, "48 8B C4 55 53 56 57 41 54 41 55 41 56 41 57 48 8D A8",
-                       __fastcall, Entity*, Entity* pBG, std::string name, std::string text,
-                       float x, float y, bool bChecked, uint32_t fontID, float fontScale,
-                       bool unclickable, std::string unk10, std::string unk11, std::string unk12)
+REGISTER_GAME_FUNCTION(
+    CreateCheckBox,
+    "48 8B C4 55 53 56 57 41 54 41 55 41 56 41 57 48 8D A8 78 FE FF FF 48 81 EC 48 02 00 00 48 C7 "
+    "45 30 FE FF FF FF 0F 29 70 A8 0F 29 78 98 44 0F 29 40 88 44 0F 29 88 78 FF FF FF 48 8B",
+    __fastcall, Entity*, Entity* pBG, std::string name, std::string text, float x, float y,
+    bool bChecked, uint32_t fontID, float fontScale, bool unclickable, std::string unk10,
+    std::string unk11, std::string unk12)
 
 // BoostSigFire
 // Can be removed when boost signals1 exists
