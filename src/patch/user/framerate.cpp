@@ -71,7 +71,7 @@ class FramerateUnlockPatch : public patch::BasePatch
             // vanilla. They will most likely get bound by GPU driver V-Sync though. On VirtualBox
             // with a 60Hz display, it did lock the fps to 63 as opposed to 59.
             // On a no V-Sync scenario, it should be ~84 fps initially.
-            if (fpsLimit < 90 && real::AppGetVar(real::GetApp(), "osgt_qol_fps_min90")->GetUINT32())
+            if (fpsLimit < 90 && real::GetApp()->GetVar("osgt_qol_fps_min90")->GetUINT32())
                 fpsLimit = 90;
 
             real::SetFPSLimit(app, fpsLimit);

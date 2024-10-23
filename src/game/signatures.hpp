@@ -1,18 +1,9 @@
 #pragma once
 #include "game/game.hpp"
-#include "game/struct/entity.hpp"
+#include "game/struct/app.hpp"
 
 // GetApp
-REGISTER_GAME_FUNCTION(GetApp, "44 0F 28 F8 E8 ? ? ? ? 48 8B C8 48 8D", __fastcall, void*);
-
-// App::GetVar
-REGISTER_GAME_FUNCTION(
-    AppGetVar,
-    "E8 ? ? ? ? 48 8B D8 48 8B 4C 24 70 48 83 F9 10 72 51 48 FF C1 48 8B 54 24 58 48 81 F9 00 10 "
-    "00 00 72 38 F6 C2 1F 74 06 E8 ? ? ? ? CC 48 8B 42 F8 48 3B C2 72 06 E8 ? ? ? ? CC 48 2B D0 48 "
-    "83 FA 08 73 06 E8 ? ? ? ? CC 48 83 FA 27 76 06 E8 ? ? ? ? CC 48 8B D0 48 8B CA E8 ? ? ? ? 48 "
-    "C7 44 24 70 0F 00 00 00 4C 89",
-    __fastcall, Variant*, void* pApp, std::string varName);
+REGISTER_GAME_FUNCTION(GetApp, "44 0F 28 F8 E8 ? ? ? ? 48 8B C8 48 8D", __fastcall, App*);
 
 // CreateSlider
 // NOTE: Need to investigate the final strings. They're not there originally in Proton SDK.
@@ -42,6 +33,7 @@ REGISTER_GAME_FUNCTION(BoostSigFire,
                        __fastcall, void, void* pSig_onChanged, void*);
 
 // GetEntityRoot
+// NOTE: Can be deprecated if we wrap our own to call GetApp() and pass on BaseApp's m_entityRoot.
 REGISTER_GAME_FUNCTION(GetEntityRoot,
                        "E8 ? ? ? ? E8 ? ? ? ? 48 8B C8 33 D2 E8 ? ? ? ? 48 8B 4D F8 48 33 CC E8 ? "
                        "? ? ? 4C 8D 9C 24 80 00 00 00 49 8B 5B 28",

@@ -123,13 +123,10 @@ class ServerSwitcher : public patch::BasePatch
         // Take a few elements as anchors to get margins down.
         // We are namely interested in "GrowID: " label for Y coordinate and
         // "text" label for X coordinate.
-        float marginY = pOnlineMenu->GetEntityByName("tankid_name_label")
-                            ->GetShared()
-                            ->GetVar("pos2d")
-                            ->GetVector2()
-                            .y;
+        float marginY =
+            pOnlineMenu->GetEntityByName("tankid_name_label")->GetVar("pos2d")->GetVector2().y;
         float marginX =
-            pOnlineMenu->GetEntityByName("text")->GetShared()->GetVar("pos2d")->GetVector2().x;
+            pOnlineMenu->GetEntityByName("text")->GetVar("pos2d")->GetVector2().x;
 
         // Create our very own label
         Entity* pServerLabel = real::CreateTextLabelEntity(
@@ -141,17 +138,13 @@ class ServerSwitcher : public patch::BasePatch
         // We will append the height of our label to be directly below it for marginY.
         // We will also make the textbox stretch to same length as non-ID name field.
         // The larger InputTextEntity is, the more characters it can fit within its bounds.
-        float vSizeX =
-            pOnlineMenu->GetEntityByName("name")->GetShared()->GetVar("size2d")->GetVector2().x;
-        vSizeX += pOnlineMenu->GetEntityByName("name_input_box_online")
-                      ->GetShared()
-                      ->GetVar("size2d")
-                      ->GetVector2()
-                      .x;
-        Entity* pServerInput = real::CreateInputTextEntity(
-            pOnlineMenu, "osgt_qol_server_input", marginX,
-            marginY + pServerLabel->GetShared()->GetVar("size2d")->GetVector2().y, serverOverride,
-            vSizeX, 0.0, "", "", "");
+        float vSizeX = pOnlineMenu->GetEntityByName("name")->GetVar("size2d")->GetVector2().x;
+        vSizeX +=
+            pOnlineMenu->GetEntityByName("name_input_box_online")->GetVar("size2d")->GetVector2().x;
+        Entity* pServerInput =
+            real::CreateInputTextEntity(pOnlineMenu, "osgt_qol_server_input", marginX,
+                                        marginY + pServerLabel->GetVar("size2d")->GetVector2().y,
+                                        serverOverride, vSizeX, 0.0, "", "", "");
 
         // Make it a bit neater by setting a max length and disallowing going through bounds.
         EntityComponent* pTextRenderComp = pServerInput->GetComponentByName("InputTextRender");
@@ -216,8 +209,6 @@ class CacheLocationFixer : public patch::BasePatch
         // We need to modify cache string in App
         auto addr = game.findMemoryPattern<uint8_t*>(pattern::GetApp);
         real::GetApp = utils::resolveRelativeCall<GetApp_t>(addr + 4);
-        std::string* currentCachePath =
-            reinterpret_cast<std::string*>(reinterpret_cast<uint8_t*>(real::GetApp()) + 4696);
 
         // Get our current directory
         TCHAR lpBuffer[MAX_PATH];
@@ -232,13 +223,13 @@ class CacheLocationFixer : public patch::BasePatch
         else
         {
             // Assign the new cache path value to both App and our static variable
-            currentCachePath->assign(std::string(lpBuffer) + "\\cache/");
+            real::GetApp()->m_cachePath = std::string(lpBuffer) + "\\cache/";
             // Windows doesn't give us a trailing slash. We want to have one in our path variable
             cachePath.assign(lpBuffer);
             cachePath.append("\\");
             // We need to create the directory ourselves or the game will freak out about "no
             // storage space" when retrieving items.dat
-            CreateDirectoryA(currentCachePath->c_str(), 0);
+            CreateDirectoryA(real::GetApp()->m_cachePath.c_str(), 0);
         }
 
         // Hook GetAppCachePath to resolve any directory issues when downloading files to cache

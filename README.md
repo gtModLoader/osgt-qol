@@ -32,7 +32,7 @@ User Patches:
 - Server Switcher - You can now connect to various servers without modifying hosts file with this mod
 - Cache Location Fixer - Binds game's cache folder to the same folder game installation is on. Useful for people that have multiple Growtopia installations. **NOTE:** Your save.dat is still shared between other installations
 - Bubble Opacity Slider - Backport of the modern client bubble opacity feature
-- Hotkey patch - Adds hotkeys number 1 through 4 to cycle through your inventory's quickbar
+- Hotkey patch - Adds hotkeys number 1 through 3 to cycle through your inventory's quickbar
 
 ## Recommended additions
 When Growtopia switched to using BGFX as its rendering framework, Windows clients started using DirectX9 as opposed to OpenGL. With this transition, several visuals broke.

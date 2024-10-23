@@ -1,7 +1,9 @@
 #include "game/game.hpp"
 #include "game/signatures.hpp"
-#include "game/struct/component.hpp"
+#include "game/struct/app.hpp"
 #include "game/struct/entity.hpp"
+#include "game/struct/component.hpp"
+#include "game/struct/components/gamelogic.hpp"
 #include "patch/patch.hpp"
 #include "utils/utils.hpp"
 
@@ -43,7 +45,7 @@ REGISTER_GAME_FUNCTION(ToolSelectComponentOnTouchStart,
 REGISTER_GAME_FUNCTION(
     GameLogicComponentDialogIsOpen,
     "40 55 48 8B EC 48 83 EC 50 48 C7 45 D0 FE FF FF FF 48 89 5C 24 60 48 89 7C 24 68 48 8B",
-    __fastcall, bool, void*);
+    __fastcall, bool, GameLogicComponent*);
 
 class HotkeyPatch : public patch::BasePatch
 {
@@ -99,8 +101,7 @@ class HotkeyPatch : public patch::BasePatch
         if (keyCode >= 600000)
         {
             // nit: GameLogicComponent and App struct/class
-            void* GameLogic = reinterpret_cast<uint8_t*>(real::GetApp()) + 2920;
-            if (real::GameLogicComponentDialogIsOpen(GameLogic))
+            if (real::GameLogicComponentDialogIsOpen(real::GetApp()->GetGameLogic()))
                 return;
 
             // We only want to act if they key is pressed, not released.
@@ -141,10 +142,9 @@ class HotkeyPatch : public patch::BasePatch
     static void AddCustomKeybinds()
     {
         // Map our custom keybinds for switching between quickbar slots.
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect0", 49, 600000, 0, 0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect1", 50, 600001, 0, 0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect2", 51, 600002, 0, 0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect3", 52, 600003, 0, 0);
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect1", 49, 600001, 0, 0);
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect2", 50, 600002, 0, 0);
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect3", 51, 600003, 0, 0);
     }
 };
 REGISTER_USER_GAME_PATCH(HotkeyPatch, hotkey_patch);

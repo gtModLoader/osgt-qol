@@ -38,8 +38,6 @@ void game::OptionsManager::initialize()
     real::BoostSigFire = game.findMemoryPattern<BoostSigFire_t>(pattern::BoostSigFire);
     real::GetApp =
         utils::resolveRelativeCall<GetApp_t>(game.findMemoryPattern<uint8_t*>(pattern::GetApp) + 4);
-    real::AppGetVar = utils::resolveRelativeCall<AppGetVar_t>(
-        game.findMemoryPattern<uint8_t*>(pattern::AppGetVar));
     real::GetFontAndScaleToFitThisLinesPerScreenY =
         game.findMemoryPattern<GetFontAndScaleToFitThisLinesPerScreenY_t>(
             pattern::GetFontAndScaleToFitThisLinesPerScreenY);
@@ -76,13 +74,12 @@ void OptionsManager::renderSlider(OptionsManager::GameOption& optionDef, void* p
     // NOTE: This can be removed when there's functional boost signals1 support.
     pSliderComp->GetParent()->GetVarWithDefault("osgt_setting", Variant(optionDef.varName));
     // Move the slider button according to variable in SharedDB.
-    pSliderComp->GetVar("progress")
-        ->Set(real::AppGetVar(real::GetApp(), optionDef.varName)->GetFloat());
+    pSliderComp->GetVar("progress")->Set(real::GetApp()->GetVar(optionDef.varName)->GetFloat());
     // Fire m_pSig_onChanged.
     real::BoostSigFire(pSliderComp->GetVar("progress")->m_pSig_onChanged, 0);
 
     // Adjust margin for next option.
-    vPosY += pSliderComp->GetParent()->GetShared()->GetVar("size2d")->GetVector2().y;
+    vPosY += pSliderComp->GetParent()->GetVar("size2d")->GetVector2().y;
 }
 
 void OptionsManager::renderCheckbox(OptionsManager::GameOption& optionDef, void* pEntityPtr,
@@ -99,7 +96,7 @@ void OptionsManager::renderCheckbox(OptionsManager::GameOption& optionDef, void*
     real::GetFontAndScaleToFitThisLinesPerScreenY(fontID, fontScale, 20);
 
     // Retrieve our variant as we need to set checkbox value as its created
-    Variant* pVariant = real::AppGetVar(real::GetApp(), optionDef.varName);
+    Variant* pVariant = real::GetApp()->GetVar(optionDef.varName);
 
     // The final 4 string args aren't there in Proton, but they are in client. Currently they don't
     // seem to have much use.
@@ -108,7 +105,7 @@ void OptionsManager::renderCheckbox(OptionsManager::GameOption& optionDef, void*
                              pVariant->GetUINT32() == 1, fontID, fontScale, false, "", "", "");
 
     // Adjust margin for next option.
-    vPosY += pCheckbox->GetShared()->GetVar("size2d")->GetVector2().y;
+    vPosY += pCheckbox->GetVar("size2d")->GetVector2().y;
 }
 
 void OptionsManager::OptionsMenuAddContent(void* pEnt, void* unk2, void* unk3, void* unk4)
@@ -194,7 +191,7 @@ void OptionsManager::OptionsMenuOnSelect(void* pVListPtr)
             // In the future, a patch should pass on a function of its own for checkboxes on
             // what to do after a state change, if needed.
             Entity* pCheckbox = pScrollChild->GetEntityByName(opt.varName);
-            Variant* pVariant = real::AppGetVar(real::GetApp(), opt.varName);
+            Variant* pVariant = real::GetApp()->GetVar(opt.varName);
             pVariant->Set(pCheckbox->GetVar("checked")->GetUINT32());
         }
         // Lets save our sliders
@@ -210,7 +207,7 @@ void OptionsManager::OptionsMenuOnSelect(void* pVListPtr)
             if (pVariant == nullptr)
                 continue;
             std::string key = pVariant->GetString();
-            pVariant = real::AppGetVar(real::GetApp(), key);
+            pVariant = real::GetApp()->GetVar(key);
             pVariant->Set(ent->GetComponentByName("Slider")->GetVar("progress")->GetFloat());
         }
     }

@@ -29,5 +29,5 @@ Forces the game to place its cache where the game is executed from.
 Backports the Bubble Opacity slider and feature.
 +bubble_opacity_backport
 
-Adds new hotkeys to the game. Currently it adds keys 1 through 4 to select items from inventory's quickbar.
+Adds new hotkeys to the game. Currently it adds keys 1 through 3 to select items from inventory's quickbar.
 +hotkey_patch
