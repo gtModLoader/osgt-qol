@@ -34,3 +34,6 @@ Adds new hotkeys to the game. Currently it adds keys 1 through 3 to select items
 
 Your ears will thank you! Backports Start Music volume slider
 +start_music_slider_backport
+
+Returns the old checkbox paddings (i.e. they used to be more tightly packed)
++old_checkboxes

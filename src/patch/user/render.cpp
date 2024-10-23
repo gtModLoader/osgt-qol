@@ -130,3 +130,15 @@ class BubbleOpacityBackport : public patch::BasePatch
     }
 };
 REGISTER_USER_GAME_PATCH(BubbleOpacityBackport, bubble_opacity_backport);
+
+class RemoveCheckboxPadding : public patch::BasePatch
+{
+  public:
+    void apply() const override
+    {
+        auto& game = game::GameHarness::get();
+        auto addr = game.findMemoryPattern<uint8_t*>("E8 ? ? ? ? C7 00 03 00 00 00 F3 44 0F 11 40 10 F3 0F 11");
+        utils::nopMemory(addr + 11, 11);
+    }
+};
+REGISTER_USER_GAME_PATCH(RemoveCheckboxPadding, old_checkboxes);
