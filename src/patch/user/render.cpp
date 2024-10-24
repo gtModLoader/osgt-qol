@@ -136,8 +136,14 @@ class RemoveCheckboxPadding : public patch::BasePatch
   public:
     void apply() const override
     {
+        // Reverts the checkbox spacings back to how they were since 2013.
+
         auto& game = game::GameHarness::get();
-        auto addr = game.findMemoryPattern<uint8_t*>("E8 ? ? ? ? C7 00 03 00 00 00 F3 44 0F 11 40 10 F3 0F 11");
+        auto addr = game.findMemoryPattern<uint8_t*>(
+            "E8 ? ? ? ? C7 00 03 00 00 00 F3 44 0F 11 40 10 F3 0F 11");
+        // They multiplied some values related to size2d at end of function here in V2.997+. By
+        // patching out the 2 MOVSS instructions in CreateCheckbox, we essentially revert that
+        // change.
         utils::nopMemory(addr + 11, 11);
     }
 };

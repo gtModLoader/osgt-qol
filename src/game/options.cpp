@@ -114,6 +114,23 @@ void OptionsManager::OptionsMenuAddContent(void* pEnt, void* unk2, void* unk3, v
     real::OptionsMenuAddContent(pEnt, unk2, unk3, unk4);
     Entity* pScrollChild = reinterpret_cast<Entity*>(pEnt);
 
+    // Patch the uncentered buttons located after vanilla checkboxes.
+    int i = 0;
+    for (const auto& ent : *pScrollChild->GetChildren())
+    {
+        // Bit lazy, but I don't want to do 5 string comparisons every loop cycle
+        // or iterate over the list 5 separate times.
+        if (i > 0 || ent->GetName() == "support")
+        {
+            // Fix the alignment manually. The position just isn't multiplied proper.
+            CL_Vec2f pos2d = ent->GetVar("pos2d")->GetVector2();
+            pos2d.x *= 2;
+            ent->GetVar("pos2d")->Set(pos2d);
+            if (++i >= 5)
+                break;
+        }
+    }
+
     // Use final element of the menu for anchoring our elements to.
     Entity* pLastEntity = pScrollChild->GetChildren()->back();
     // I know, iPhoneMapX used on a Y pos, but that's apparently what the client does.

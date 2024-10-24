@@ -35,6 +35,24 @@ class AboutMenuAttribution : public patch::BasePatch
         // Let about menu construct itself normally, we can't really do a pre-hook
         // here since the function deletes all children by default.
         real::AboutMenuAddScrollContent(pScrollChild);
+
+        // Patch the uncentered buttons located after the blurbs.
+        int i = 0;
+        for (const auto& ent : *pScrollChild->GetChildren())
+        {
+            // Bit lazy, but I don't want to do 6 string comparisons every loop cycle
+            // or iterate over the list 6 separate times.
+            if (i > 0 || ent->GetName() == "privacy")
+            {
+                // Fix the alignment manually. The position just isn't multiplied proper.
+                CL_Vec2f pos2d = ent->GetVar("pos2d")->GetVector2();
+                pos2d.x *= 2;
+                ent->GetVar("pos2d")->Set(pos2d);
+                if (++i >= 6)
+                    break;
+            }
+        }
+
         // We take over TextBox2 (the last Entity under children) and insert our own
         // attribution logic to it.
         Entity* pTextBox2 = pScrollChild->GetChildren()->back();

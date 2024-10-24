@@ -34,7 +34,7 @@ User Patches:
 - Bubble Opacity Slider - Backport of the modern client bubble opacity feature
 - Hotkey patch - Adds hotkeys number 1 through 3 to cycle through your inventory's quickbar
 - Start Music Slider - Backport of modern client Start Music volume slider, your ears will thank you
-- Old Checkboxes - Removes the odd spacing introduced in late 2.XX versions on checkboxes
+- Old Checkboxes - Removes the odd spacing introduced in version V2.997 on checkboxes
 
 ## Recommended additions
 When Growtopia switched to using BGFX as its rendering framework, Windows clients started using DirectX9 as opposed to OpenGL. With this transition, several visuals broke.
