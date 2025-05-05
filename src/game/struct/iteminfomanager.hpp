@@ -7,9 +7,15 @@
 struct ItemInfo
 {
     unsigned int ID;
+    short category;
     void* pad;
     std::string name;
-    uint8_t pad2[840];
+    uint8_t pad2[184];
+    // 232
+    std::string altPath;
+    uint8_t pad3[4];
+    int animationMS;
+    uint8_t pad4[616];
 };
 class ItemInfoManager
 {

@@ -3,8 +3,9 @@
 #include <string>
 
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include <mmeapi.h>
+#include <windows.h>
+
 #define EXPORT extern "C" __declspec(dllexport)
 
 // Entry point.
@@ -20,17 +21,14 @@ void setup()
     auto& game = game::GameHarness::get();
     auto& patchMgr = patch::PatchManager::get();
     auto& optionsMgr = game::OptionsManager::get();
+    auto& weatherMgr = game::WeatherManager::get();
     try
     {
-        // Initialize game harness and apply patches.
-        game.initialize();
-        // Silence audio while we setup loading screen
-        game.toggleGameAudio();
-        game.resolveRenderSigs();
+        // Show the loading screen and load patches
         game.toggleLoadScreen();
-        // We can re-enable it now.
         game.toggleGameAudio();
         optionsMgr.initialize();
+        weatherMgr.initialize();
         patchMgr.applyPatchesFromFile("patches.txt");
         game.setWindowTitle("Growtopia [OSGT-QOL]");
         game.toggleLoadScreen();
@@ -56,7 +54,15 @@ void runSetupIfNeeded()
 {
     static long done = 0;
     if (InterlockedCompareExchange(&done, 1, 0) == 0)
+    {
+        auto& game = game::GameHarness::get();
+        // Delay loading the game until we've initialized game harness and resolved a subset of
+        // functions to show a loading screen. This increases overall stability.
+        game.initialize();
+        game.toggleGameAudio();
+        game.resolveRenderSigs();
         CreateThread(NULL, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(setup), NULL, 0, NULL);
+    }
 }
 
 // Initializes the library if needed and calls original DirectInput8Create.

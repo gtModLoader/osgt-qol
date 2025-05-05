@@ -4,6 +4,7 @@ set (SOURCES
     game/game.cpp
     game/drawing.cpp
     game/options.cpp
+    game/weathermanager.cpp
     game/struct/graphics/background.cpp
     game/struct/graphics/background_clouds.cpp
     game/struct/graphics/background_default.cpp

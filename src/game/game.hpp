@@ -1,7 +1,9 @@
 #pragma once
+#include "game/struct/graphics/background.hpp"
 #include "game/struct/variant.hpp"
 #include <stdexcept>
 #include <string>
+
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -39,8 +41,8 @@ class GameHarness
     // initialization of other objects).
     void initialize();
 
-    // Temporarily used to store various function signature resolves that are used in structs/classes.
-    // This should be probably reworked when an API-consumer model is created.
+    // Temporarily used to store various function signature resolves that are used in
+    // structs/classes. This should be probably reworked when an API-consumer model is created.
     void resolveRenderSigs();
 
     // Toggles the loading screen
@@ -142,7 +144,8 @@ class OptionsManager
     // Adds a checkbox option to end of GameOptions list.
     // varName is points to a variable in save.dat.
     // displayName is the string visibile directly next to the checkbox.
-    void addCheckboxOption(std::string varName, std::string displayName, VariantListCallback pCallback)
+    void addCheckboxOption(std::string varName, std::string displayName,
+                           VariantListCallback pCallback)
     {
         GameOption option;
         option.type = OPTION_CHECKBOX;
@@ -167,6 +170,34 @@ class OptionsManager
     static void __fastcall OptionsMenuOnSelect(void* pVList);
 };
 
+// Responsible for providing a standard way to register custom weathers
+typedef Background* (*WeatherCallback)();
+class WeatherManager
+{
+  public:
+    struct CustomWeather
+    {
+        int mappedID;
+        WeatherCallback callback;
+    };
+    // Get WeatherManager instance
+    static WeatherManager& get();
+
+    // Initialize WeatherManager. This has to be invoked after GameHarness has finished
+    // initialization and the game window has been hidden for patching.
+    // This will resolve and hook all the functions needed to provide an API for weathers
+    void initialize();
+
+    void refreshIDs();
+
+    void registerWeather(std::string prettyName, WeatherCallback pCallback);
+    std::map<std::string, CustomWeather> weathers;
+    bool mappedWeathers = false;
+
+  private:
+    static void __thiscall WorldRendererForceBackground(uint8_t* this_, int WeatherID, void* unk3,
+                                                        void* unk4);
+};
 } // namespace game
 
 ///////////////////////////////////
@@ -238,6 +269,6 @@ void game::GameHarness::hookFunctionPatternCall(const std::string& pattern, F de
         throw std::runtime_error("Failed to find pattern '" + pattern + "'.");
     auto call = utils::resolveRelativeCall<F>(addr);
     if (call == nullptr)
-         throw std::runtime_error("Failed to resolve call at " + std::to_string((uintptr_t*)addr));
+        throw std::runtime_error("Failed to resolve call at " + std::to_string((uintptr_t*)addr));
     hookFunction<F>(call, detour, original);
 }

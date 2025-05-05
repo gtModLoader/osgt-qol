@@ -59,9 +59,9 @@ Background_Clouds::Background_Clouds(Background* pParentBG, std::string fileName
     m_pParentRef = pParentBG;
     m_pClouds = 0;
 
-    m_pCloudSurf.SetBlendingMode(Surface::BLENDING_PREMULTIPLIED_ALPHA);
-    m_pCloudSurf.LoadFile(fileName); // This should use GetSmartFile.
-    m_pCloudSurf.SetupAnim(1, 1);
+    m_cloudSurf.SetBlendingMode(Surface::BLENDING_PREMULTIPLIED_ALPHA);
+    m_cloudSurf.LoadFile(fileName); // This should use GetSmartFile.
+    m_cloudSurf.SetupAnim(1, 1);
 }
 
 Background_Clouds::~Background_Clouds()
@@ -105,7 +105,7 @@ void Background_Clouds::Update()
         // For left side, we have to factor in the cloud surface size and the distance its at.
         float boundLeftX =
             (m_pParentRef->m_renderRect.left -
-             m_pParentRef->m_scale.x * m_pCloudSurf.m_originalWidth * pCloud->distance) /
+             m_pParentRef->m_scale.x * m_cloudSurf.m_originalWidth * pCloud->distance) /
             pCloud->distance;
         // For right side, even though we never move cloud there, it may get stuck on too far right
         // end or cloud may initialize too far right.
@@ -149,7 +149,7 @@ void Background_Clouds::Render(CL_Vec2f& vCamera, float graphicDetail, float clo
             // appropriate opacity.
             if (0.8 < graphicDetail)
                 pCloud->color = -0x100 - (int)(pCloud->distance * -255.0);
-            m_pCloudSurf.BlitScaledAnim((pCloud->distance * pCloud->X) - vCamera.x,
+            m_cloudSurf.BlitScaledAnim((pCloud->distance * pCloud->X) - vCamera.x,
                                         (pCloud->distance * pCloud->Y) - vCamera.y, 0, 0, &vScale,
                                         0, pCloud->color, 0, 0, pCloud->flipX);
         }

@@ -64,7 +64,6 @@ REGISTER_GAME_FUNCTION(LogToConsole,
                        "00 00 ? ? ? ? ? 48 2B E0 48 8B 05 86 E4 2D",
                        __fastcall, void, const char*);
 
-static std::string serverOverride = "osgt1.cernodile.com";
 class ServerSwitcher : public patch::BasePatch
 {
   public:
@@ -103,6 +102,13 @@ class ServerSwitcher : public patch::BasePatch
         game.hookFunctionPatternDirect<RequestIAPPricesFromHouston_t>(
             pattern::RequestIAPPricesFromHouston, RequestIAPPricesFromHouston,
             &real::RequestIAPPricesFromHouston);
+
+        // Use any cached value
+        std::string Hostname = real::GetApp()->GetVar("osgt_qol_server_hostname")->GetString();
+        if (Hostname.size() == 0)
+        {
+            real::GetApp()->GetVar("osgt_qol_server_hostname")->Set("osgt1.cernodile.com");
+        }
     }
 
     static Entity* __fastcall OnlineMenuCreate(Entity* pGUI)
@@ -135,10 +141,11 @@ class ServerSwitcher : public patch::BasePatch
         float vSizeX = pOnlineMenu->GetEntityByName("name")->GetVar("size2d")->GetVector2().x;
         vSizeX +=
             pOnlineMenu->GetEntityByName("name_input_box_online")->GetVar("size2d")->GetVector2().x;
-        Entity* pServerInput =
-            real::CreateInputTextEntity(pOnlineMenu, "osgt_qol_server_input", marginX,
-                                        marginY + pServerLabel->GetVar("size2d")->GetVector2().y,
-                                        serverOverride, vSizeX, 0.0, "", "", "");
+        Entity* pServerInput = real::CreateInputTextEntity(
+            pOnlineMenu, "osgt_qol_server_input", marginX,
+            marginY + pServerLabel->GetVar("size2d")->GetVector2().y,
+            real::GetApp()->GetVar("osgt_qol_server_hostname")->GetString(), vSizeX, 0.0, "", "",
+            "");
 
         // Make it a bit neater by setting a max length and disallowing going through bounds.
         EntityComponent* pTextRenderComp = pServerInput->GetComponentByName("InputTextRender");
@@ -173,7 +180,7 @@ class ServerSwitcher : public patch::BasePatch
                 pServerInput->GetComponentByName("InputTextRender")->GetVar("text")->GetString();
             if (userInput.size() != 0)
             {
-                serverOverride = userInput;
+                real::GetApp()->GetVar("osgt_qol_server_hostname")->Set(userInput);
             }
         }
         return real::OnlineMenuOnConnect(pEnt);
@@ -185,9 +192,11 @@ class ServerSwitcher : public patch::BasePatch
         // We only want to modify something accessing the server data.
         if (URI == "growtopia/server_data.php")
         {
-            pVList->Get(0).Set(serverOverride);
+            pVList->Get(0).Set(real::GetApp()->GetVar("osgt_qol_server_hostname")->GetString());
             real::LogToConsole(
-                std::string("Using `w" + serverOverride + "`` as the server data provider...")
+                std::string("Using `w" +
+                            real::GetApp()->GetVar("osgt_qol_server_hostname")->GetString() +
+                            "`` as the server data provider...")
                     .c_str());
         }
         real::HTTPComponentInitAndStart(this_, pVList);

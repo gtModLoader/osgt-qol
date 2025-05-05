@@ -123,6 +123,38 @@ void GameHarness::toggleLoadScreen()
 {
     if (!bLoadingScreen)
     {
+        // We may be a bit too early into game's loading phase, do some safety checks
+        // If we disable something too early, it'll cause an early crash.
+        Entity* pGUI = real::GetApp()->m_entityRoot->GetEntityByName("GUI");
+        while (!pGUI)
+        {
+            Sleep(10);
+            pGUI = real::GetApp()->m_entityRoot->GetEntityByName("GUI");
+        }
+        // CustomInput component may take a while to show up
+        Entity* pMainMenu = pGUI->GetEntityByName("MainMenu");
+        while (!pMainMenu)
+        {
+            Sleep(10);
+            pMainMenu = pGUI->GetEntityByName("MainMenu");
+        }
+        while (!pMainMenu->GetComponentByName("CustomInput"))
+        {
+            Sleep(10);
+        }
+        // Disable mainmenu inputs so we don't fall through any inputs.
+        // Menu Buttons
+        for (const auto& ent : *pMainMenu->GetChildren())
+        {
+            EntityComponent* m_pButton2D = ent->GetComponentByName("Button2D");
+            if (m_pButton2D)
+            {
+                m_pButton2D->GetShared()->GetVar("disabled")->Set(1U);
+            }
+        }
+        // ESC to quit
+        pMainMenu->GetComponentByName("CustomInput")->GetVar("disabled")->Set(1U);
+
         // Create our loading screen, we'll opt to use an overlay entity with same style as other
         // game menus.
         bLoadingScreen = true;
@@ -134,20 +166,12 @@ void GameHarness::toggleLoadScreen()
         Rectf screenRect;
         real::GetScreenRect(screenRect);
         pOverEnt->GetVar("size2d")->Set(Vec2f(screenRect.right, screenRect.bottom));
-
         // We inform the user about the patching.
         Entity* pTextLabel = real::CreateTextLabelEntity(
             pOverEnt, "loadTxt", screenRect.right / 2.0f, screenRect.bottom / 2.0f,
             "`$Please wait!`` Game is currently being patched.");
         // Center-upper align the text.
         pTextLabel->GetVar("alignment")->Set(5U);
-        // Disable mainmenu inputs so we don't fall through any inputs.
-        real::GetApp()
-            ->m_entityRoot->GetEntityByName("GUI")
-            ->GetEntityByName("MainMenu")
-            ->GetComponentByName("CustomInput")
-            ->GetVar("disabled")
-            ->Set(1U);
     }
     else
     {
@@ -161,6 +185,16 @@ void GameHarness::toggleLoadScreen()
         MapBGComponent* pMapBG = (MapBGComponent*)pMainMenu->GetComponentByName("MapBGComponent");
         pMapBG->m_pBackground->m_fadeProgress = 1.0f;
         // Re-enable inputs
+        // Menu Buttons
+        for (const auto& ent : *pMainMenu->GetChildren())
+        {
+            EntityComponent* m_pButton2D = ent->GetComponentByName("Button2D");
+            if (m_pButton2D)
+            {
+                m_pButton2D->GetShared()->GetVar("disabled")->Set(0U);
+            }
+        }
+        // ESC to quit
         pMainMenu->GetComponentByName("CustomInput")->GetVar("disabled")->Set(0U);
         // nit: ugly, need better way to figue this out
         float musicVol = real::GetApp()->GetVar("music_vol")->GetFloat();

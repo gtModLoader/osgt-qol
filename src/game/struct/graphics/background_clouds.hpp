@@ -29,7 +29,7 @@ class Background_Clouds
 
     int m_cloudMoveType;
     int m_cloudTintType;
-    SurfaceAnim m_pCloudSurf;
+    SurfaceAnim m_cloudSurf;
     int m_cloudCount = 50;
     Cloud* m_pClouds = nullptr;
     Background* m_pParentRef;

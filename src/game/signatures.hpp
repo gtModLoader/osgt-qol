@@ -46,6 +46,9 @@ DEFINE_GAME_FUNCTION(SurfaceAnimBlitScaledAnim, __thiscall, void, void* pAnimSur
                      float rotation, CL_Vec2f* vRotationPt, bool flipX, bool flipY, void* pBatcher,
                      int padding);
 
+// Declared in weathermanager.cpp
+DEFINE_GAME_FUNCTION(WorldRendererForceBackground, __thiscall, void, uint8_t*, int, void*, void*);
+
 // Need a better place for it.
 DEFINE_GAME_FUNCTION(GetAudioManager, __fastcall, void*);
 DEFINE_GAME_FUNCTION(AudioManagerFMODSetMusicVol, __fastcall, void, void* this_, float musicVol)

@@ -44,17 +44,6 @@ REGISTER_GAME_FUNCTION(DrawFilledBitmapRect,
                        "48 83 EC 48 66 0F 6E 01 66 0F 6E 49 04 0F B6 44 24 70", __fastcall, void,
                        rtRectf&, uint32_t, uint32_t, void*, bool);
 
-REGISTER_GAME_FUNCTION(
-    WorldRendererForceBackground,
-    "40 55 56 57 48 8B EC 48 83 EC 40 48 C7 45 E0 FE FF FF FF 48 89 5C 24 70 8B F2 48 8B F9 33",
-    __fastcall, void, uint8_t*, int, void*, void*);
-
-struct WorldRenderer
-{
-    uint8_t pad[200];
-    Background* m_pWeather;
-    int m_activeWeather;
-};
 class GoodNightTitleScreen : public patch::BasePatch
 {
   public:
@@ -171,34 +160,12 @@ class BloodMoonDemoWeather : public patch::BasePatch
   public:
     void apply() const override
     {
-        // This is a proof-of-concept demo. This should be providerized for other patches to add to
-        // this.
-        auto& game = game::GameHarness::get();
-        // Hook.
-        game.hookFunctionPatternDirect<WorldRendererForceBackground_t>(
-            pattern::WorldRendererForceBackground, WorldRendererForceBackground,
-            &real::WorldRendererForceBackground);
+        // This is a demo mod showcasing how to register a custom weather.
+        // See src/game/struct/graphics/backgound_blood.cpp for the weather implementation.
+        auto& weatherMgr = game::WeatherManager::get();
+        weatherMgr.registerWeather("blood_moon", &onWeatherCreate);
     }
-    static void __fastcall WorldRendererForceBackground(uint8_t* this_, int WeatherID, void* unk3,
-                                                        void* unk4)
-    {
-        if (WeatherID == 100)
-        {
-            // TODO: Providerize this.
-            WorldRenderer* pRender = reinterpret_cast<WorldRenderer*>(this_);
-            if (pRender->m_pWeather != 0)
-                delete pRender->m_pWeather;
-            Background_Blood* pNewBG = new Background_Blood();
-            // We don't have a good test case right now for this one.
-            // Vec2f scale(*(float*)(this_ + 168), *(float*)(this_ + 172));
-            // pNewBG->SetScale(scale);
-            pNewBG->Init(true);
-            pRender->m_activeWeather = WeatherID;
-            pRender->m_pWeather = pNewBG;
-        }
-        else
-            real::WorldRendererForceBackground(this_, WeatherID, unk3, unk4);
-        return;
-    }
+
+    static Background* onWeatherCreate() { return new Background_Blood(); }
 };
 REGISTER_USER_GAME_PATCH(BloodMoonDemoWeather, blood_moon_demo_weather);
