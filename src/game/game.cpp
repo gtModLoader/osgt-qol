@@ -42,15 +42,4 @@ void GameHarness::setWindowTitle(const std::string& title)
     SetWindowTextA(window, title.c_str());
 }
 
-void GameHarness::toggleGameAudio()
-{
-    if (audioMuted)
-        waveOutSetVolume(0, audioLevel);
-    else {
-        waveOutGetVolume(0, &audioLevel);
-        waveOutSetVolume(0, 0);
-    }
-    audioMuted = !audioMuted;
-}
-
 } // namespace game

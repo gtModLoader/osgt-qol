@@ -36,10 +36,11 @@ void game::WeatherManager::initialize()
         &real::WorldRendererForceBackground);
 }
 
-void game::WeatherManager::registerWeather(std::string prettyName, WeatherCallback pCallback)
+void game::WeatherManager::registerWeather(std::string prettyName, WeatherCallback pCallback,
+                                           int weatherID)
 {
     CustomWeather weather;
-    weather.mappedID = -1;
+    weather.mappedID = weatherID;
     weather.callback = pCallback;
 
     auto& weatherMgr = game::WeatherManager::get();

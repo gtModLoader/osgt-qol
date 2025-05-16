@@ -106,7 +106,7 @@ class HotkeyPatch : public patch::BasePatch
             // We only want to act if they key is pressed, not released.
             if (bKeyFired)
             {
-                Entity* pGUI = real::GetEntityRoot()->GetEntityByName("GUI");
+                Entity* pGUI = real::GetApp()->m_entityRoot->GetEntityByName("GUI");
                 // We don't want the key presses to happen when we can't even see our quickbar.
                 if (pGUI->GetEntityByName("OptionsMenu"))
                     return;

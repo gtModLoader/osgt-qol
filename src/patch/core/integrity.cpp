@@ -7,19 +7,6 @@ REGISTER_GAME_FUNCTION(DownloadFileComponentInit,
                        "40 55 53 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 28 FE FF FF", __fastcall,
                        void, void*, std::string, void*, void*)
 
-class IntegrityPatch : public patch::BasePatch
-{
-  public:
-    void apply() const override
-    {
-        auto& game = game::GameHarness::get();
-        // Patch out CRC integrity check.
-        auto addr = game.findMemoryPattern<uint8_t*>("00 3B C1 75 ? 85 C9");
-        utils::nopMemory(addr + 1, 6);
-    }
-};
-REGISTER_CORE_GAME_PATCH(IntegrityPatch, integrity_bypass);
-
 class SecureItemManager : public patch::BasePatch
 {
   public:

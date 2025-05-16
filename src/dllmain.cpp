@@ -24,13 +24,13 @@ void setup()
     auto& weatherMgr = game::WeatherManager::get();
     try
     {
-        // Show the loading screen and load patches
+        // Initialize modding APIs and load patches.
+        game.setWindowTitle("Growtopia [OSGT-QOL]");
         game.toggleLoadScreen();
-        game.toggleGameAudio();
+        game.resolveRenderSigs();
         optionsMgr.initialize();
         weatherMgr.initialize();
         patchMgr.applyPatchesFromFile("patches.txt");
-        game.setWindowTitle("Growtopia [OSGT-QOL]");
         game.toggleLoadScreen();
         std::fprintf(stderr, "Done applying patches.\n");
     }
@@ -56,11 +56,18 @@ void runSetupIfNeeded()
     if (InterlockedCompareExchange(&done, 1, 0) == 0)
     {
         auto& game = game::GameHarness::get();
-        // Delay loading the game until we've initialized game harness and resolved a subset of
-        // functions to show a loading screen. This increases overall stability.
+        // Delay loading the game until we've initialized game harness and can prevent loading the
+        // MainMenuCreate call from App init. This allows us to use a loading screen while patching
+        // is still ongoing. Some patches may clash with main menu existing and worse yet crash the
+        // game.
         game.initialize();
-        game.toggleGameAudio();
-        game.resolveRenderSigs();
+        // Patch out CRC integrity check.
+        auto addr = game.findMemoryPattern<uint8_t*>("00 3B C1 75 ? 85 C9");
+        utils::nopMemory(addr + 1, 6);
+        // Patch out MainMenuCreate call.
+        addr = game.findMemoryPattern<uint8_t*>(
+            "33 D2 49 8B CE E8 ? ? ? ? F3 0F 10 ? ? ? ? ? 0F 2F ? ? ? ? ? 0F");
+        utils::nopMemory(addr + 5, 5);
         CreateThread(NULL, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(setup), NULL, 0, NULL);
     }
 }

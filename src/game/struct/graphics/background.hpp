@@ -14,7 +14,7 @@ class Background : public boost::signals::trackable
     virtual void Render(Vec2f& vScreenPos, float graphicDetail);
     virtual void Init(bool);
     virtual void Update();
-    virtual void RenderForeground(Vec2f, float);
+    virtual void RenderForeground(Vec2f&, float);
     virtual void SetScale(Vec2f&);
     virtual void UpdateSFXVolume(float vol);
 

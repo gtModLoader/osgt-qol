@@ -31,23 +31,6 @@ REGISTER_GAME_FUNCTION(
     bool bChecked, uint32_t fontID, float fontScale, bool unclickable, std::string unk10,
     std::string unk11, std::string unk12)
 
-// GetEntityRoot
-// NOTE: Can be deprecated if we wrap our own to call GetApp() and pass on BaseApp's m_entityRoot.
-REGISTER_GAME_FUNCTION(GetEntityRoot,
-                       "E8 ? ? ? ? E8 ? ? ? ? 48 8B C8 33 D2 E8 ? ? ? ? 48 8B 4D F8 48 33 CC E8 ? "
-                       "? ? ? 4C 8D 9C 24 80 00 00 00 49 8B 5B 28",
-                       __fastcall, Entity*);
-
-// GetFontAndScaleToFitThisLinesPerScreenY
-REGISTER_GAME_FUNCTION(GetFontAndScaleToFitThisLinesPerScreenY,
-                       "48 89 5C 24 08 57 48 83 EC 50 0F 29 74 24 40 48 8B DA", __fastcall, void,
-                       uint32_t& fontID, float& fontScale, float lines);
-
-// SetupTextEntity
-REGISTER_GAME_FUNCTION(SetupTextEntity,
-                       "48 8B C4 55 57 41 54 41 56 41 57 48 8D 68 A1 48 81 EC E0 00 00 00 48 C7 44",
-                       __fastcall, void, Entity*, uint32_t eFontID, float fontScale);
-
 // ResizeScrollBounds
 // Params: VariantList with Entity containing "Scroll" and "scroll_child"
 REGISTER_GAME_FUNCTION(ResizeScrollBounds,
@@ -91,19 +74,12 @@ void game::OptionsManager::initialize()
     // Resolve our needed functions
     real::CreateSlider = game.findMemoryPattern<CreateSlider_t>(pattern::CreateSlider);
     real::CreateCheckBox = game.findMemoryPattern<CreateCheckBox_t>(pattern::CreateCheckBox);
-    real::GetFontAndScaleToFitThisLinesPerScreenY =
-        game.findMemoryPattern<GetFontAndScaleToFitThisLinesPerScreenY_t>(
-            pattern::GetFontAndScaleToFitThisLinesPerScreenY);
-    real::SetupTextEntity = game.findMemoryPattern<SetupTextEntity_t>(pattern::SetupTextEntity);
     real::iPadMapX = game.findMemoryPattern<iPadMapX_t>(pattern::iPadMapX);
     real::iPadMapY = game.findMemoryPattern<iPadMapY_t>(pattern::iPadMapY);
     real::iPhoneMapX = game.findMemoryPattern<iPhoneMapX_t>(pattern::iPhoneMapX);
     real::iPhoneMapY = game.findMemoryPattern<iPhoneMapY_t>(pattern::iPhoneMapY);
     real::ResizeScrollBounds =
         game.findMemoryPattern<ResizeScrollBounds_t>(pattern::ResizeScrollBounds);
-
-    auto addr = game.findMemoryPattern<uint8_t*>(pattern::GetEntityRoot);
-    real::GetEntityRoot = utils::resolveRelativeCall<GetEntityRoot_t>(addr + 5);
 
     // Hook
     game.hookFunctionPatternDirect<OptionsMenuAddContent_t>(

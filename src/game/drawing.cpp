@@ -79,29 +79,32 @@ REGISTER_GAME_FUNCTION(CreateTextLabelEntity, "48 8B C4 55 57 41 56 48 8D 68 A9 
                        __fastcall, Entity*, Entity* pParentEnt, std::string name, float vPosX,
                        float vPosY, std::string);
 
-// GetAudioManager
-REGISTER_GAME_FUNCTION(
-    GetAudioManager,
-    "F3 44 0F 10 ? ? ? ? ? F3 44 0F 10 ? ? ? ? ? 44 38 B6 D9 02 00 00 0F 84 ? ? ? ? E8 ? ? ? ?",
-    __fastcall, void*);
+// GetFontAndScaleToFitThisLinesPerScreenY
+REGISTER_GAME_FUNCTION(GetFontAndScaleToFitThisLinesPerScreenY,
+                       "48 89 5C 24 08 57 48 83 EC 50 0F 29 74 24 40 48 8B DA", __fastcall, void,
+                       uint32_t& fontID, float& fontScale, float lines);
 
-// AudioManagerFMOD::SetMusicVol
-REGISTER_GAME_FUNCTION(AudioManagerFMODSetMusicVol,
-                       "40 53 48 83 EC 30 48 8B D9 0F 29 74 24 20 48 8B 89 A8 00", __fastcall, void,
-                       void* this_, float musicVol);
+// SetupTextEntity
+REGISTER_GAME_FUNCTION(SetupTextEntity,
+                       "48 8B C4 55 57 41 54 41 56 41 57 48 8D 68 A1 48 81 EC E0 00 00 00 48 C7 44",
+                       __fastcall, void, Entity*, uint32_t eFontID, float fontScale);
+
+// EntitySetScaleBySize(longlong param_1,float *param_2,char param_3,char param_4)
+REGISTER_GAME_FUNCTION(EntitySetScaleBySize,
+                       "48 8B C4 55 56 57 41 56 41 57 48 81 EC 80 00 00 00 48 C7 40 80", __fastcall,
+                       void, Entity*, CL_Vec2f&, bool, bool);
+
+// MainMenuCreate
+REGISTER_GAME_FUNCTION(
+    MainMenuCreate,
+    "48 8B C4 55 57 41 54 41 56 41 57 48 8D A8 E8 F8 FF FF 48 81 EC F0 07 00 00 48 C7 85 80 01",
+    __fastcall, void, Entity*, bool);
 
 namespace game
 {
 void GameHarness::resolveRenderSigs()
 {
-    real::GetApp =
-        utils::resolveRelativeCall<GetApp_t>(findMemoryPattern<uint8_t*>(pattern::GetApp) + 4);
-    real::GetAudioManager = utils::resolveRelativeCall<GetAudioManager_t>(
-        findMemoryPattern<uint8_t*>(pattern::GetAudioManager) + 31);
-    real::AudioManagerFMODSetMusicVol =
-        findMemoryPattern<AudioManagerFMODSetMusicVol_t>(pattern::AudioManagerFMODSetMusicVol);
     real::DrawFilledRect = findMemoryPattern<DrawFilledRect_t>(pattern::DrawFilledRect);
-    real::GetScreenRect = findMemoryPattern<GetScreenRect_t>(pattern::GetScreenRect);
     real::SurfaceCtor = findMemoryPattern<SurfaceCtor_t>(pattern::SurfaceCtor);
     real::SurfaceDtor = findMemoryPattern<SurfaceDtor_t>(pattern::SurfaceDtor);
     real::SurfaceLoadFile = findMemoryPattern<SurfaceLoadFile_t>(pattern::SurfaceLoadFile);
@@ -111,100 +114,68 @@ void GameHarness::resolveRenderSigs()
 
     real::SurfaceAnimCtor = findMemoryPattern<SurfaceAnimCtor_t>(pattern::SurfaceAnimCtor);
     real::SurfaceAnimDtor = findMemoryPattern<SurfaceAnimDtor_t>(pattern::SurfaceAnimDtor);
-
-    real::CreateOverlayEntity =
-        findMemoryPattern<CreateOverlayEntity_t>(pattern::CreateOverlayEntity);
-    real::CreateTextLabelEntity =
-        findMemoryPattern<CreateTextLabelEntity_t>(pattern::CreateTextLabelEntity);
 }
 
-bool bLoadingScreen = false;
+static uint8_t loadScreenState = 0;
 void GameHarness::toggleLoadScreen()
 {
-    if (!bLoadingScreen)
+    if (loadScreenState == 0)
     {
-        // We may be a bit too early into game's loading phase, do some safety checks
-        // If we disable something too early, it'll cause an early crash.
-        Entity* pGUI = real::GetApp()->m_entityRoot->GetEntityByName("GUI");
-        while (!pGUI)
-        {
-            Sleep(10);
-            pGUI = real::GetApp()->m_entityRoot->GetEntityByName("GUI");
-        }
-        // CustomInput component may take a while to show up
-        Entity* pMainMenu = pGUI->GetEntityByName("MainMenu");
-        while (!pMainMenu)
-        {
-            Sleep(10);
-            pMainMenu = pGUI->GetEntityByName("MainMenu");
-        }
-        while (!pMainMenu->GetComponentByName("CustomInput"))
-        {
-            Sleep(10);
-        }
-        // Disable mainmenu inputs so we don't fall through any inputs.
-        // Menu Buttons
-        for (const auto& ent : *pMainMenu->GetChildren())
-        {
-            EntityComponent* m_pButton2D = ent->GetComponentByName("Button2D");
-            if (m_pButton2D)
-            {
-                m_pButton2D->GetShared()->GetVar("disabled")->Set(1U);
-            }
-        }
-        // ESC to quit
-        pMainMenu->GetComponentByName("CustomInput")->GetVar("disabled")->Set(1U);
-
+        // Resolve a subset of functions needed here.
+        real::GetApp =
+            utils::resolveRelativeCall<GetApp_t>(findMemoryPattern<uint8_t*>(pattern::GetApp) + 4);
+        real::GetScreenRect = findMemoryPattern<GetScreenRect_t>(pattern::GetScreenRect);
+        real::SetupTextEntity = findMemoryPattern<SetupTextEntity_t>(pattern::SetupTextEntity);
+        real::CreateOverlayEntity =
+            findMemoryPattern<CreateOverlayEntity_t>(pattern::CreateOverlayEntity);
+        real::CreateTextLabelEntity =
+            findMemoryPattern<CreateTextLabelEntity_t>(pattern::CreateTextLabelEntity);
+        real::EntitySetScaleBySize =
+            findMemoryPattern<EntitySetScaleBySize_t>(pattern::EntitySetScaleBySize);
+        real::GetFontAndScaleToFitThisLinesPerScreenY =
+            findMemoryPattern<GetFontAndScaleToFitThisLinesPerScreenY_t>(
+                pattern::GetFontAndScaleToFitThisLinesPerScreenY);
+        real::MainMenuCreate = findMemoryPattern<MainMenuCreate_t>(pattern::MainMenuCreate);
         // Create our loading screen, we'll opt to use an overlay entity with same style as other
         // game menus.
-        bLoadingScreen = true;
-        real::AudioManagerFMODSetMusicVol(real::GetAudioManager(), 0.0f);
+        loadScreenState = 1;
         Entity* pLoadScreen = real::GetApp()->m_entityRoot->AddEntity(new Entity("LoadScreenMenu"));
         Entity* pOverEnt = real::CreateOverlayEntity(pLoadScreen, "LoadScreen",
                                                      "interface/large/generic_menu.rttex", 0, 0);
-        // We will size it to our screen without currently really regarding much for scale.
+        // We will size it to match our screen.
         Rectf screenRect;
         real::GetScreenRect(screenRect);
-        pOverEnt->GetVar("size2d")->Set(Vec2f(screenRect.right, screenRect.bottom));
+        CL_Vec2f vScreenSize(screenRect.right, screenRect.bottom);
+        real::EntitySetScaleBySize(pOverEnt, vScreenSize, 0, 0);
+
         // We inform the user about the patching.
         Entity* pTextLabel = real::CreateTextLabelEntity(
             pOverEnt, "loadTxt", screenRect.right / 2.0f, screenRect.bottom / 2.0f,
             "`$Please wait!`` Game is currently being patched.");
         // Center-upper align the text.
         pTextLabel->GetVar("alignment")->Set(5U);
+        // Scale text
+        uint32_t fontID;
+        float fontScale;
+        real::GetFontAndScaleToFitThisLinesPerScreenY(fontID, fontScale, 20);
+        real::SetupTextEntity(pTextLabel, fontID, fontScale);
     }
-    else
+    else if (loadScreenState == 1)
     {
-        bLoadingScreen = false;
+        loadScreenState = 2;
         // Delete our loadscreen.
         real::GetApp()->m_entityRoot->RemoveEntityByAddress(
             real::GetApp()->m_entityRoot->GetEntityByName("LoadScreenMenu"));
-        // Reset the fade as well
-        Entity* pMainMenu =
-            real::GetApp()->m_entityRoot->GetEntityByName("GUI")->GetEntityByName("MainMenu");
-        MapBGComponent* pMapBG = (MapBGComponent*)pMainMenu->GetComponentByName("MapBGComponent");
-        pMapBG->m_pBackground->m_fadeProgress = 1.0f;
-        // Re-enable inputs
-        // Menu Buttons
-        for (const auto& ent : *pMainMenu->GetChildren())
-        {
-            EntityComponent* m_pButton2D = ent->GetComponentByName("Button2D");
-            if (m_pButton2D)
-            {
-                m_pButton2D->GetShared()->GetVar("disabled")->Set(0U);
-            }
-        }
-        // ESC to quit
-        pMainMenu->GetComponentByName("CustomInput")->GetVar("disabled")->Set(0U);
-        // nit: ugly, need better way to figue this out
-        float musicVol = real::GetApp()->GetVar("music_vol")->GetFloat();
-        std::vector<std::string> patches = patch::PatchManager::get().getAppliedUserPatchList();
-        if (std::find(patches.begin(), patches.end(), "start_music_slider_backport") !=
-            patches.end())
-        {
-            musicVol = real::GetApp()->GetVar("start_vol")->GetFloat();
-        }
-        real::AudioManagerFMODSetMusicVol(real::GetAudioManager(), musicVol);
+
+        // Does any patch advertise having modified MainMenuCreate, we might want to call that then.
+        if (patched::MainMenuCreate)
+            patched::MainMenuCreate(real::GetApp()->m_entityRoot->GetEntityByName("GUI"), false);
+        else
+            real::MainMenuCreate(real::GetApp()->m_entityRoot->GetEntityByName("GUI"), false);
+    }
+    else
+    {
+        printf("toggleLoadScreen has been called after it's lived its purpose!?\n");
     }
 }
 }; // namespace game

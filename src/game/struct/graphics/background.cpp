@@ -40,7 +40,7 @@ void Background::Init(bool bInWorld) { return; }
 
 void Background::Update() { return; }
 
-void Background::RenderForeground(Vec2f, float) { return; }
+void Background::RenderForeground(Vec2f&, float) { return; }
 
 void Background::SetScale(Vec2f& vScale)
 {

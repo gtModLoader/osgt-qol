@@ -14,9 +14,6 @@ PatchManager& PatchManager::get()
 
 void PatchManager::applyPatchesFromFile(const std::string& fileName)
 {
-    // Apply integrity bypass check first.
-    applyPatch("integrity_bypass");
-
     // First apply all core patches.
     for (auto patch : patchMap)
     {

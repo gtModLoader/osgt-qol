@@ -33,18 +33,12 @@ REGISTER_GAME_FUNCTION(BackgroundDefaultDtor,
                        "40 53 48 83 EC 20 48 8D 05 B3 C9 30 00 48 8B D9 48 89 01 48 8B 89 10 01",
                        __fastcall, void, Background*);
 
-// MainMenuCreate
-REGISTER_GAME_FUNCTION(
-    MainMenuCreate,
-    "48 8B C4 55 57 41 54 41 56 41 57 48 8D A8 E8 F8 FF FF 48 81 EC F0 07 00 00 48 C7 85 80 01",
-    __fastcall, void, Entity*, bool);
-
 // DrawFilledBitmapRect
 REGISTER_GAME_FUNCTION(DrawFilledBitmapRect,
                        "48 83 EC 48 66 0F 6E 01 66 0F 6E 49 04 0F B6 44 24 70", __fastcall, void,
                        rtRectf&, uint32_t, uint32_t, void*, bool);
 
-class GoodNightTitleScreen : public patch::BasePatch
+class CustomizedTitleScreen : public patch::BasePatch
 {
   public:
     void apply() const override
@@ -58,11 +52,12 @@ class GoodNightTitleScreen : public patch::BasePatch
             game.findMemoryPattern<BackgroundDefaultDtor_t>(pattern::BackgroundDefaultDtor);
 
         // Hook
-        game.hookFunctionPatternDirect<MainMenuCreate_t>(pattern::MainMenuCreate, MainMenuCreate,
-                                                         &real::MainMenuCreate);
-
-        // Manually invoke weather change
-        ChangeMainMenuWeather(real::GetEntityRoot()->GetEntityByName("GUI"));
+        // pattern::MainMenuCreate collision with drawing.cpp - so we define pattern manually here.
+        game.hookFunctionPatternDirect<MainMenuCreate_t>(
+            "48 8B C4 55 57 41 54 41 56 41 57 48 8D A8 E8 F8 FF FF 48 81 EC F0 07 00 00 48 C7 85 "
+            "80 01",
+            MainMenuCreate, &real::MainMenuCreate);
+        patched::MainMenuCreate = MainMenuCreate;
     }
 
     static void __fastcall MainMenuCreate(Entity* pEnt, bool unk2)
@@ -71,6 +66,21 @@ class GoodNightTitleScreen : public patch::BasePatch
         real::MainMenuCreate(pEnt, unk2);
         // After which we can change the weather without issue.
         ChangeMainMenuWeather(pEnt);
+
+        // Lets also add modloader version label to the menuscreen to the opposite of version
+        Entity* pVerLabel = pEnt->GetEntityByName("MainMenu")->GetEntityByName("version");
+        CL_Vec2f m_verLabelPos = pVerLabel->GetVar("pos2d")->GetVector2();
+        CL_Vec2f m_verLabelSize = pVerLabel->GetVar("size2d")->GetVector2();
+
+        Entity* pTextLabel = real::CreateTextLabelEntity(pEnt->GetEntityByName("MainMenu"), "mltxt",
+                                                         0, m_verLabelPos.y - m_verLabelSize.y,
+                                                         "`wOSGT-QOL V1.0-ALPHA``");
+        // Retrieve fontscale and scale created entity
+        uint32_t fontID;
+        float fontScale;
+        real::GetFontAndScaleToFitThisLinesPerScreenY(fontID, fontScale, 20);
+        real::SetupTextEntity(pTextLabel, fontID, fontScale);
+        // Also needs fadeinentity
     }
 
     static void ChangeMainMenuWeather(Entity* pGUIEnt)
@@ -94,7 +104,7 @@ class GoodNightTitleScreen : public patch::BasePatch
         real::BackgroundDefaultDtor(pOriginalWeather);
     }
 };
-REGISTER_USER_GAME_PATCH(GoodNightTitleScreen, goodnight_title_screen);
+REGISTER_USER_GAME_PATCH(CustomizedTitleScreen, customized_title_screen);
 
 class BubbleOpacityBackport : public patch::BasePatch
 {

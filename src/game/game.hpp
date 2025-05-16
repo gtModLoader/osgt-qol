@@ -4,7 +4,6 @@
 #include <stdexcept>
 #include <string>
 
-
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
@@ -18,6 +17,10 @@
 #define REGISTER_GAME_FUNCTION(name, patt, conv, ret, ...)                                         \
     using name##_t = ret(conv*)(__VA_ARGS__);                                                      \
     namespace real                                                                                 \
+    {                                                                                              \
+    name##_t name = nullptr;                                                                       \
+    }                                                                                              \
+    namespace patched                                                                              \
     {                                                                                              \
     name##_t name = nullptr;                                                                       \
     }                                                                                              \
@@ -69,9 +72,6 @@ class GameHarness
 
     // Changes the game window title to the specified string.
     void setWindowTitle(const std::string& title);
-
-    // Toggles the game's audio through Windows Multimedia API
-    void toggleGameAudio();
 
     // Sets the game window visibility.
     inline void setWindowVisible(bool visible) const
@@ -190,7 +190,11 @@ class WeatherManager
 
     void refreshIDs();
 
-    void registerWeather(std::string prettyName, WeatherCallback pCallback);
+    // Registers a weather under WeatherManager. Defaults to unmapped weather ID (-1).
+    // The weather ID is assigned by the server by setting extra file path as
+    // "loader/weather/pretty_name".
+    void registerWeather(std::string prettyName, WeatherCallback pCallback, int weatherID = -1);
+
     std::map<std::string, CustomWeather> weathers;
     bool mappedWeathers = false;
 

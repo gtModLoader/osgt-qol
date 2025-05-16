@@ -38,6 +38,5 @@ target_compile_options(dinput8 PRIVATE ${OPTIONS})
 set (LIBRARIES 
     minhook
     libboost_signals-vc120-mt-1_55
-    winmm.lib
 )
 target_link_libraries(dinput8 PRIVATE ${LIBRARIES})

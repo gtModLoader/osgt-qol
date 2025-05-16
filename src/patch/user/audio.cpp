@@ -4,6 +4,17 @@
 #include "patch/patch.hpp"
 #include "utils/utils.hpp"
 
+// GetAudioManager
+REGISTER_GAME_FUNCTION(
+    GetAudioManager,
+    "F3 44 0F 10 ? ? ? ? ? F3 44 0F 10 ? ? ? ? ? 44 38 B6 D9 02 00 00 0F 84 ? ? ? ? E8 ? ? ? ?",
+    __fastcall, void*);
+
+// AudioManagerFMOD::SetMusicVol
+REGISTER_GAME_FUNCTION(AudioManagerFMODSetMusicVol,
+                       "40 53 48 83 EC 30 48 8B D9 0F 29 74 24 20 48 8B 89 A8 00", __fastcall, void,
+                       void* this_, float musicVol);
+
 // AudioManagerFMOD::Preload
 REGISTER_GAME_FUNCTION(AudioManagerFMODPreload,
                        "40 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 30 FF FF FF 48 81 EC "
@@ -60,6 +71,11 @@ class StartMusicSliderBackport : public patch::BasePatch
 
         auto& game = game::GameHarness::get();
 
+        real::GetAudioManager = utils::resolveRelativeCall<GetAudioManager_t>(
+            game.findMemoryPattern<uint8_t*>(pattern::GetAudioManager) + 31);
+        real::AudioManagerFMODSetMusicVol = game.findMemoryPattern<AudioManagerFMODSetMusicVol_t>(
+            pattern::AudioManagerFMODSetMusicVol);
+
         // We re-use "start_vol" variable from newer client. Modern client users get to keep their
         // preference.
         Variant* pVariant = real::GetApp()->GetVar("start_vol");
@@ -68,9 +84,6 @@ class StartMusicSliderBackport : public patch::BasePatch
 
         auto& optionsMgr = game::OptionsManager::get();
         optionsMgr.addSliderOption("start_vol", "Start Music", &StartVolumeSliderCallback);
-
-        // The first sound is almost certainly going to be theme.ogg, so lets lower the volume.
-        real::AudioManagerFMODSetMusicVol(real::GetAudioManager(), pVariant->GetFloat());
 
         // Hook.
         game.hookFunctionPatternDirect(pattern::AudioManagerFMODPlay, AudioManagerFMODPlay,
