@@ -53,6 +53,10 @@ DEFINE_GAME_FUNCTION(CreateTextLabelEntity, __fastcall, Entity*, Entity* pParent
 DEFINE_GAME_FUNCTION(SetupTextEntity, __fastcall, void, Entity*, uint32_t eFontID, float fontScale);
 DEFINE_GAME_FUNCTION(GetFontAndScaleToFitThisLinesPerScreenY, __fastcall, void, uint32_t& fontID,
                      float& fontScale, float lines);
+DEFINE_GAME_FUNCTION(AddBMPRectAroundEntity, __fastcall, void, Entity* pEnt, uint32_t col1,
+                     uint32_t col2, float padding);
+DEFINE_GAME_FUNCTION(FadeInEntity, __fastcall, void, Entity* pEnt, bool bRecursive, int timeMS,
+                     int delayMS, float fadeTarget, int timing);
 DEFINE_GAME_FUNCTION(MainMenuCreate, __fastcall, void, Entity*, bool);
 
 // Declared in weathermanager.cpp

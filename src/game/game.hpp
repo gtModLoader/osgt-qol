@@ -162,7 +162,7 @@ class OptionsManager
     // varName points to a variable in save.dat.
     // displayName is the string visible above the multichoice option.
     // displayOptions is the "pretty name" corresponding to the numeric variable.
-    // vMmodSizeX is optional parameter if you need larger size than vSizeX 180
+    // vModSizeX is optional parameter if you need larger size than vSizeX 180
     // Draws an option that looks roughly:
     // displayName
     // [<] [ displayOptions[var] ] [>]
@@ -207,6 +207,11 @@ class WeatherManager
         int mappedID;
         WeatherCallback callback;
     };
+    struct CustomWeatherEvent
+    {
+        CustomWeather* m_pCustWeather;
+        std::string m_prettyName;
+    };
     // Get WeatherManager instance
     static WeatherManager& get();
 
@@ -224,6 +229,8 @@ class WeatherManager
 
     std::map<std::string, CustomWeather> weathers;
     bool mappedWeathers = false;
+
+    boost::signal<void(game::WeatherManager::CustomWeatherEvent*)> m_sig_eventSubscribe;
 
   private:
     static void __thiscall WorldRendererForceBackground(uint8_t* this_, int WeatherID, void* unk3,

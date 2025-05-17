@@ -100,6 +100,18 @@ REGISTER_GAME_FUNCTION(EntitySetScaleBySize,
                        "48 8B C4 55 56 57 41 56 41 57 48 81 EC 80 00 00 00 48 C7 40 80", __fastcall,
                        void, Entity*, CL_Vec2f&, bool, bool);
 
+// AddBMPRectAroundEntity
+REGISTER_GAME_FUNCTION(
+    AddBMPRectAroundEntity,
+    "48 8B C4 55 56 57 41 56 41 57 48 8D 68 98 48 81 EC 40 01 00 00 48 C7 44 24 68 FE FF FF FF",
+    __fastcall, void, Entity* pEnt, uint32_t col1, uint32_t col2, float padding);
+
+// FadeInEntity
+REGISTER_GAME_FUNCTION(FadeInEntity,
+                       "40 55 53 56 57 48 8D 6C 24 D8 48 81 EC 28 01 00 00 48 C7 44 24 60",
+                       __fastcall, void, Entity* pEnt, bool bRecursive, int timeMS, int delayMS,
+                       float fadeTarget, int timing);
+
 // MainMenuCreate
 REGISTER_GAME_FUNCTION(
     MainMenuCreate,
@@ -122,6 +134,9 @@ void GameHarness::resolveRenderSigs()
     real::SurfaceAnimDtor = findMemoryPattern<SurfaceAnimDtor_t>(pattern::SurfaceAnimDtor);
 
     real::SetTextEntity = findMemoryPattern<SetTextEntity_t>(pattern::SetTextEntity);
+    real::AddBMPRectAroundEntity =
+        findMemoryPattern<AddBMPRectAroundEntity_t>(pattern::AddBMPRectAroundEntity);
+    real::FadeInEntity = findMemoryPattern<FadeInEntity_t>(pattern::FadeInEntity);
 }
 
 static uint8_t loadScreenState = 0;

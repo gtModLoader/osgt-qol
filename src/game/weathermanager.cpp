@@ -44,7 +44,11 @@ void game::WeatherManager::registerWeather(std::string prettyName, WeatherCallba
     weather.callback = pCallback;
 
     auto& weatherMgr = game::WeatherManager::get();
-    weatherMgr.weathers.insert(make_pair(prettyName, weather));
+    auto ret = weatherMgr.weathers.insert(make_pair(prettyName, weather));
+    CustomWeatherEvent* evt = new CustomWeatherEvent;
+    evt->m_prettyName = prettyName;
+    evt->m_pCustWeather = &ret.first->second;
+    (weatherMgr.m_sig_eventSubscribe)(evt);
 }
 
 void __thiscall game::WeatherManager::WorldRendererForceBackground(uint8_t* this_, int WeatherID,

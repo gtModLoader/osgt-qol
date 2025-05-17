@@ -1,6 +1,7 @@
 #include "game/game.hpp"
 #include "game/signatures.hpp"
 #include "game/struct/graphics/background.hpp"
+#include "game/struct/graphics/background_blank.hpp"
 #include "game/struct/graphics/background_blood.hpp"
 #include "game/struct/graphics/background_default.hpp"
 #include "game/struct/graphics/surface.hpp"
@@ -15,6 +16,12 @@
 #include "game/struct/variant.hpp"
 #include <vcruntime_new_debug.h>
 
+// Background_Sunset::Background_Sunset
+REGISTER_GAME_FUNCTION(BackgroundSunset,
+                       "48 89 4C 24 08 55 56 57 41 56 41 57 48 8B EC 48 81 EC 80 00 00 00 48 C7 45 "
+                       "B0 FE FF FF FF 48 89 9C 24 C8 00 00 00",
+                       __fastcall, Background*, void*);
+
 // Background_Night::Background_Night
 REGISTER_GAME_FUNCTION(
     BackgroundNight,
@@ -22,10 +29,46 @@ REGISTER_GAME_FUNCTION(
     "FF FF FF 48 89 9C 24 C8 00 00 00",
     __fastcall, Background*, void*, int);
 
+// Background_Desert::Background_Desert
+REGISTER_GAME_FUNCTION(BackgroundDesert,
+                       "48 89 4C 24 08 55 56 57 41 56 41 57 48 8B EC 48 81 EC 80 00 00 00 48 C7 45 "
+                       "B0 FE FF FF FF 48 89 9C 24 C0 00 00 00 48 8B F1 E8 ? ? ? ? 90",
+                       __fastcall, Background*, void*);
+
+// Background_Harvest::Background_Harvest
+REGISTER_GAME_FUNCTION(
+    BackgroundHarvest,
+    "48 8B C4 48 89 48 08 55 57 41 54 41 56 41 57 48 8B EC 48 83 EC 70 48 C7 45 B0 FE FF FF FF",
+    __fastcall, Background*, void*);
+
+// Background_Mars::Background_Mars
+REGISTER_GAME_FUNCTION(BackgroundMars,
+                       "48 89 4C 24 08 55 56 57 41 56 41 57 48 8B EC 48 81 EC 80 00 00 00 48 C7 45 "
+                       "B0 FE FF FF FF 48 89 9C 24 C0 00 00 00 4C 8B F1 E8",
+                       __fastcall, Background*, void*);
+
 // Background_Undersea::Background_Undersea
 REGISTER_GAME_FUNCTION(BackgroundUndersea,
                        "48 89 4C 24 08 55 56 57 48 83 EC 70 48 C7 44 24 20 FE FF FF FF", __fastcall,
                        Background*, void*);
+
+// Background_Warp::Background_Warp
+REGISTER_GAME_FUNCTION(BackgroundWarp,
+                       "48 8B C4 48 89 48 08 56 57 41 56 48 83 EC 70 48 C7 40 98 FE FF FF FF 48 89 "
+                       "58 10 48 89 68 20 8B DA 4C 8B F1 E8",
+                       __fastcall, Background*, void*, int);
+
+// Background_Wolf::Background_Wolf
+REGISTER_GAME_FUNCTION(BackgroundWolf,
+                       "48 8B C4 48 89 48 08 55 56 57 41 54 41 55 41 56 41 57 48 8D 68 A1 48 81 EC "
+                       "B0 00 00 00 48 C7 45 A7 FE FF FF FF",
+                       __fastcall, Background*, void*);
+
+// Background_Pagoda::Background_Pagoda
+REGISTER_GAME_FUNCTION(BackgroundPagoda,
+                       "48 8B C4 48 89 48 08 55 57 41 54 41 56 41 57 48 8B EC 48 81 EC 80 00 00 00 "
+                       "48 C7 45 B0 FE FF FF FF",
+                       __fastcall, Background*, void*);
 
 // Background_Monochrome::Background_Monochrome
 REGISTER_GAME_FUNCTION(
@@ -34,12 +77,32 @@ REGISTER_GAME_FUNCTION(
     "00 00 00 48 8B F9 E8 ? ? ? ? 90 48 8D ? ? ? ? ? 48 89 07 48 8D 8F 10 01 00 00 E8 ? ? ? ?",
     __fastcall, Background*, void*);
 
+// Background_Treasure::Background_Treasure
+REGISTER_GAME_FUNCTION(BackgroundTreasure,
+                       "48 89 4C 24 08 55 53 56 57 41 54 41 56 41 57 48 8B EC 48 81 EC 80 00 00 00 "
+                       "48 C7 45 B0 FE FF FF FF",
+                       __fastcall, Background*, void*);
+
+// Background_Surgery::Background_Surgery
+REGISTER_GAME_FUNCTION(BackgroundSurgery,
+                       "48 8B C4 48 89 48 08 55 56 57 41 54 41 55 41 56 41 57 48 8D 68 A1 48 81 EC "
+                       "90 00 00 00 48 C7 45 C7 FE FF FF FF",
+                       __fastcall, Background*, void*);
+
+// Background_Bountiful::Background_Bountiful
+REGISTER_GAME_FUNCTION(
+    BackgroundBountiful,
+    "48 89 4C 24 08 55 56 57 48 8B EC 48 81 EC 80 00 00 00 48 C7 45 B0 FE FF FF FF 48 89 9C 24 B8 "
+    "00 00 00 48 8B F9 E8 ? ? ? ? 90 48 8D ? ? ? ? ? 48 89 07 48 8D 8F 18 01 00 00",
+    __fastcall, Background*, void*);
+
 // DrawFilledBitmapRect
 REGISTER_GAME_FUNCTION(DrawFilledBitmapRect,
                        "48 83 EC 48 66 0F 6E 01 66 0F 6E 49 04 0F B6 44 24 70", __fastcall, void,
                        rtRectf&, uint32_t, uint32_t, void*, bool);
 
 static std::vector<std::string> displayNames;
+static uint32_t vanillaWeatherBound = 16;
 class CustomizedTitleScreen : public patch::BasePatch
 {
   public:
@@ -47,11 +110,28 @@ class CustomizedTitleScreen : public patch::BasePatch
     {
         auto& game = game::GameHarness::get();
         // Resolve functions
+        real::BackgroundSunset =
+            game.findMemoryPattern<BackgroundSunset_t>(pattern::BackgroundSunset);
         real::BackgroundNight = game.findMemoryPattern<BackgroundNight_t>(pattern::BackgroundNight);
+        real::BackgroundDesert =
+            game.findMemoryPattern<BackgroundDesert_t>(pattern::BackgroundDesert);
+        real::BackgroundHarvest =
+            game.findMemoryPattern<BackgroundHarvest_t>(pattern::BackgroundHarvest);
+        real::BackgroundMars = game.findMemoryPattern<BackgroundMars_t>(pattern::BackgroundMars);
         real::BackgroundUndersea =
             game.findMemoryPattern<BackgroundUndersea_t>(pattern::BackgroundUndersea);
+        real::BackgroundWarp = game.findMemoryPattern<BackgroundWarp_t>(pattern::BackgroundWarp);
+        real::BackgroundWolf = game.findMemoryPattern<BackgroundWolf_t>(pattern::BackgroundWolf);
+        real::BackgroundPagoda =
+            game.findMemoryPattern<BackgroundPagoda_t>(pattern::BackgroundPagoda);
         real::BackgroundMonochrome =
             game.findMemoryPattern<BackgroundMonochrome_t>(pattern::BackgroundMonochrome);
+        real::BackgroundTreasure =
+            game.findMemoryPattern<BackgroundTreasure_t>(pattern::BackgroundTreasure);
+        real::BackgroundSurgery =
+            game.findMemoryPattern<BackgroundSurgery_t>(pattern::BackgroundSurgery);
+        real::BackgroundBountiful =
+            game.findMemoryPattern<BackgroundBountiful_t>(pattern::BackgroundBountiful);
 
         // Hook
         // pattern::MainMenuCreate collision with drawing.cpp - so we define pattern manually here.
@@ -64,15 +144,27 @@ class CustomizedTitleScreen : public patch::BasePatch
         // We will allow the end-user to change their title screen weather preference
         auto& optionsMgr = game::OptionsManager::get();
         // Populate our options
-        displayNames.push_back("Sunny");
-        displayNames.push_back("Night");
-        displayNames.push_back("Undersea");
-        displayNames.push_back("Comet (Blue)");
-        displayNames.push_back("Spring");
-        displayNames.push_back("Monochrome");
+        displayNames = {"Sunny",     "Sunset",      "Night",    "Desert",     "Harvest",
+                        "Mars",      "Nothingness", "Undersea", "Warp Speed", "Comet (Blue)",
+                        "Spring",    "Howling",     "Pagoda",   "Monochrome", "Treasure",
+                        "SurgWorld", "Bountiful"};
+        // Any custom weathers
+        auto& weatherMgr = game::WeatherManager::get();
+        for (auto it = weatherMgr.weathers.begin(); it != weatherMgr.weathers.end(); ++it)
+        {
+            // Signify custom weathers with golden colour
+            displayNames.push_back("`6" + it->first);
+        }
+        weatherMgr.m_sig_eventSubscribe.connect(&customWeatherEvent);
         // Register the Multi-Choice option
         optionsMgr.addMultiChoiceOption("osgt_qol_title_bg", "Title Background", displayNames,
-                                        &TitleBackgroundOnSelect);
+                                        &TitleBackgroundOnSelect, 80.0f);
+    }
+
+    static void customWeatherEvent(game::WeatherManager::CustomWeatherEvent* pCustomWeather)
+    {
+        // Signify custom weathers with golden colour
+        displayNames.push_back("`6" + pCustomWeather->m_prettyName);
     }
 
     static void TitleBackgroundOnSelect(VariantList* pVariant)
@@ -96,6 +188,16 @@ class CustomizedTitleScreen : public patch::BasePatch
                 idx++;
         }
         pOptVar->Set(idx);
+        if (idx > vanillaWeatherBound)
+        {
+            // Custom weather, save the pretty name. These may shift around, but won't affect any
+            // already applied weathers on subsequent boots.
+            real::GetApp()->GetVar("osgt_qol_title_bg_modded")->Set(displayNames[idx].substr(2));
+        }
+        else
+        {
+            real::GetApp()->GetVar("osgt_qol_title_bg_modded")->Reset();
+        }
         // Update the option label
         Entity* pTextLabel = pClickedEnt->GetParent()->GetEntityByName("txt");
         real::SetTextEntity(pTextLabel, displayNames[idx]);
@@ -124,7 +226,8 @@ class CustomizedTitleScreen : public patch::BasePatch
         float fontScale;
         real::GetFontAndScaleToFitThisLinesPerScreenY(fontID, fontScale, 20);
         real::SetupTextEntity(pTextLabel, fontID, fontScale);
-        // Also needs fadeinentity
+        // Fade in at approximately same time as version text
+        real::FadeInEntity(pTextLabel, true, 600, 400, 1.0, true);
     }
 
     static void ChangeMainMenuWeather(Entity* pGUIEnt)
@@ -135,53 +238,139 @@ class CustomizedTitleScreen : public patch::BasePatch
 
         uint32_t weatherIdx = real::GetApp()->GetVar("osgt_qol_title_bg")->GetUINT32();
         Background* pNewBG;
-        switch (weatherIdx)
+        if (weatherIdx > vanillaWeatherBound)
         {
-        case 0:
-        {
-            pNewBG = new Background_Default();
-            break;
+            // Get custom weather from weather manager - if we don't have it, most likely the mod
+            // has been uninstalled or save.dat is manually tampered.
+            auto& weatherMgr = game::WeatherManager::get();
+            auto pair = weatherMgr.weathers.find(
+                real::GetApp()->GetVar("osgt_qol_title_bg_modded")->GetString());
+            if (pair == weatherMgr.weathers.end())
+            {
+                pNewBG = new Background_Default();
+                real::GetApp()->GetVar("osgt_qol_title_bg_modded")->Reset();
+                real::GetApp()->GetVar("osgt_qol_title_bg")->Set(0U);
+            }
+            else
+            {
+                pNewBG = pair->second.callback();
+            }
         }
-        case 1:
+        else
         {
-            // For the weathers we don't have a reversed class for, create a raw buffer.
-            // In case of Background_Night, it should be 0x348 in size.
-            void* buffer = operator new(0x348);
-            // Background_Night takes an additional value in constructor, namely the weather ID
-            // which dictates if it should render it as normal night or a comet weather.
-            pNewBG = real::BackgroundNight(buffer, 2);
-            break;
-        }
-        case 2:
-        {
-            // Undersea
-            void* buffer = operator new(0x6a0);
-            pNewBG = real::BackgroundUndersea(buffer);
-            break;
-        }
-        case 3:
-        {
-            // Comet (Blue/Weather)
-            void* buffer = operator new(0x348);
-            pNewBG = real::BackgroundNight(buffer, 17);
-            break;
-        }
-        case 4:
-        {
-            // Spring
-            pNewBG = new Background_Default();
-            ((Background_Default*)pNewBG)->m_bIsSpring = true;
-            break;
-        }
-        case 5:
-        {
-            // Monochrome
-            void* buffer = operator new(0x198);
-            pNewBG = real::BackgroundMonochrome(buffer);
-            break;
-        }
-        default:
-            break;
+            // Vanilla weathers
+            switch (weatherIdx)
+            {
+            case 0:
+            {
+                pNewBG = new Background_Default();
+                break;
+            }
+            case 1:
+            {
+                // For the weathers we don't have a reversed class for, create a raw buffer.
+                // In case of Background_Sunset, it should be 0x270 in size.
+                pNewBG = real::BackgroundSunset(operator new(0x270));
+                break;
+            }
+            case 2:
+            {
+                // Background_Night takes an additional value in constructor, namely the weather ID
+                // which dictates if it should render it as normal night or a comet weather.
+                pNewBG = real::BackgroundNight(operator new(0x348), 2);
+                break;
+            }
+            case 3:
+            {
+                // Desert / Arid
+                pNewBG = real::BackgroundDesert(operator new(0x280));
+                break;
+            }
+            case 4:
+            {
+                // Harvest Blast
+                pNewBG = real::BackgroundHarvest(operator new(0x2c8));
+                break;
+            }
+            case 5:
+            {
+                // Mars
+                pNewBG = real::BackgroundMars(operator new(0x298));
+                break;
+            }
+            case 6:
+            {
+                // Blank (Nothingness)
+                pNewBG = new Background_Blank();
+                break;
+            }
+            case 7:
+            {
+                // Undersea
+                pNewBG = real::BackgroundUndersea(operator new(0x6a0));
+                break;
+            }
+            case 8:
+            {
+                // Warp Speed
+                // 15 for Warp Speed, anything else for Stargazing
+                pNewBG = real::BackgroundWarp(operator new(0x218), 15);
+                break;
+            }
+            case 9:
+            {
+                // Comet (Blue/Weather)
+                pNewBG = real::BackgroundNight(operator new(0x348), 17);
+                break;
+            }
+            case 10:
+            {
+                // Spring
+                pNewBG = new Background_Default();
+                ((Background_Default*)pNewBG)->m_bIsSpring = true;
+                break;
+            }
+            case 11:
+            {
+                // Wolf
+                pNewBG = real::BackgroundWolf(operator new(0x330));
+                break;
+            }
+            case 12:
+            {
+                // Pagoda
+                pNewBG = real::BackgroundPagoda(operator new(0x2a0));
+                break;
+            }
+            case 13:
+            {
+                // Monochrome
+                pNewBG = real::BackgroundMonochrome(operator new(0x198));
+                break;
+            }
+            case 14:
+            {
+                // Treasure
+                pNewBG = real::BackgroundTreasure(operator new(0x250));
+                break;
+            }
+            case 15:
+            {
+                // Surgery
+                pNewBG = real::BackgroundSurgery(operator new(0x1b8));
+                break;
+            }
+            case 16:
+            {
+                // Bountiful
+                pNewBG = real::BackgroundBountiful(operator new(0x1a0));
+                break;
+            }
+            default:
+                pNewBG = new Background_Default();
+                printf("Unhandled weather %d\n", weatherIdx);
+                break;
+            }
         }
 
         if (pNewBG != nullptr)

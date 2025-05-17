@@ -6,6 +6,7 @@ set (SOURCES
     game/options.cpp
     game/weathermanager.cpp
     game/struct/graphics/background.cpp
+    game/struct/graphics/background_blank.cpp
     game/struct/graphics/background_clouds.cpp
     game/struct/graphics/background_default.cpp
     game/struct/graphics/background_blood.cpp

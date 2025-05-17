@@ -1,9 +1,9 @@
 #include "game.hpp"
 #include "game/struct/entity.hpp"
+#include "game/struct/entityutils.hpp"
 #include "signatures.hpp"
 #include "struct/rtrect.hpp"
 #include "struct/variant.hpp"
-
 
 // OptionsMenuAddContent
 REGISTER_GAME_FUNCTION(OptionsMenuAddContent,
@@ -176,14 +176,14 @@ void OptionsManager::renderMultiChoice(OptionsManager::GameOption& optionDef, vo
     // Retrieve fontscale
     uint32_t fontID;
     float fontScale;
-    real::GetFontAndScaleToFitThisLinesPerScreenY(fontID, fontScale, 20);
+    real::GetFontAndScaleToFitThisLinesPerScreenY(fontID, fontScale, 18);
 
     // Create the option label
     Entity* pOptionsLabel =
         real::CreateTextLabelEntity(pMCEnt, "optLabel", vPosX, vPosY, optionDef.displayName);
     real::SetupTextEntity(pOptionsLabel, fontID, fontScale);
 
-    vPosY += pOptionsLabel->GetVar("size2d")->GetVector2().y;
+    vPosY += pOptionsLabel->GetVar("size2d")->GetVector2().y + real::iPhoneMapY(5.0);
 
     // Retrieve our variant as we need to set the shown option label with it.
     uint32_t idx = real::GetApp()->GetVar(optionDef.varName)->GetUINT32();
@@ -194,15 +194,27 @@ void OptionsManager::renderMultiChoice(OptionsManager::GameOption& optionDef, vo
     }
 
     // They added some wack trailing args we don't care about to end of TextButtonEntity.
-    Entity* pBackButton = real::CreateTextButtonEntity(pMCEnt, "back", vPosX, vPosY, "<< ", false,
+    Entity* pBackButton = real::CreateTextButtonEntity(pMCEnt, "back", vPosX, vPosY, " << ", false,
                                                        0, "", 0, "", 0, 0);
     Entity* pTextLabel = real::CreateTextLabelEntity(pMCEnt, "txt", vPosX + (vSizeX / 2), vPosY,
                                                      (*optionDef.displayOptions)[idx]);
-    Entity* pNextButton = real::CreateTextButtonEntity(pMCEnt, "next", vPosX + vSizeX, vPosY, " >>",
-                                                       false, 0, "", 0, "", 0, 0);
+    Entity* pNextButton = real::CreateTextButtonEntity(pMCEnt, "next", vPosX + vSizeX, vPosY,
+                                                       " >> ", false, 0, "", 0, "", 0, 0);
 
     pTextLabel->GetVar("alignment")->Set(ALIGNMENT_UPPER_CENTER);
     pNextButton->GetVar("alignment")->Set(ALIGNMENT_UPPER_RIGHT);
+
+    real::GetFontAndScaleToFitThisLinesPerScreenY(fontID, fontScale, 20);
+
+    real::SetupTextEntity(pBackButton, fontID, fontScale);
+    real::SetupTextEntity(pTextLabel, fontID, fontScale);
+    real::SetupTextEntity(pNextButton, fontID, fontScale);
+
+    SetTextShadowColor(pBackButton, 150);
+    SetTextShadowColor(pNextButton, 150);
+
+    real::AddBMPRectAroundEntity(pBackButton, 0xccb887ff, 0xccb887ff, real::iPadMapY(5.0));
+    real::AddBMPRectAroundEntity(pNextButton, 0xccb887ff, 0xccb887ff, real::iPadMapY(5.0));
 
     if (optionDef.signal != nullptr)
     {
