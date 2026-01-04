@@ -110,6 +110,16 @@ class PlaymodTimersOverlay : public patch::BasePatch
         // TODO: Clear UI on server exit.
     }
 
+    static bool DoesTimerOverlayExist()
+    {
+        Entity* pWorldSpecificGUI =
+            real::GetApp()->m_entityRoot->GetEntityByName("GUI")->GetEntityByName(
+                "WorldSpecificGUI");
+        if (!pWorldSpecificGUI)
+            return false;
+        return pWorldSpecificGUI->GetEntityByName("TimerOverlay") != nullptr;
+    }
+
     static void __fastcall GameLogicComponentKillWorld(GameLogicComponent* this_, bool bUnk)
     {
         // Clear any old ui
@@ -177,32 +187,46 @@ class PlaymodTimersOverlay : public patch::BasePatch
         {
             if (packet->dataLength < 16)
             {
-                printf("invaid add/del mod payload.\n");
+                printf("[PlaymodOverlays] invaid add/del mod payload.\n");
                 break;
             }
             int offset = 10;
             PlaymodPacketDataPlaymodInfo* modData =
                 (PlaymodPacketDataPlaymodInfo*)(packet->data + offset);
             bool bNewTarget = true;
-            for (auto it = g_activeMods.begin(); it != g_activeMods.end(); it++)
+            for (auto it = g_activeMods.begin(); it != g_activeMods.end();)
             {
                 if (it->m_playmodID == modData->PlaymodID)
                 {
+                    // We can't update the overlay if it doesn't exist, so treat it as a new target.
+                    time_t oldKillstamp = it->m_killstamp;
                     bNewTarget = false;
                     it->m_killstamp = modData->Duration + time(0);
+                    if (!DoesTimerOverlayExist())
+                    {
+                        if (oldKillstamp <= time(0) || it->m_killstamp <= time(0) || modData->Duration <= 0) {
+                            printf("[PlaymodOverlays] killing offscreen\n");
+                            it = g_activeMods.erase(it);
+                            bNewTarget = true;
+                            break;
+                        }
+                    }
                     // Hide >2hr mods from showing up at first.
                     if (it->m_killstamp - time(0) > 7200)
                         it->m_bDelayLoad = true;
                     UpdateOverlayTimer(modData->PlaymodID, it->m_killstamp);
+                    printf("[PlaymodOverlays] upd kstamp=%lld, oldstamp=%lld, dur=%d\n", it->m_killstamp, oldKillstamp, modData->Duration);
                     if (it->m_killstamp <= time(0))
                     {
                         it = g_activeMods.erase(it);
                     }
                     break;
                 }
+                it++;
             }
             if (bNewTarget && modData->Duration > 0)
             {
+                printf("[PlaymodOverlays] new pmod target\n");
                 ActiveMod mod;
                 mod.m_playmodID = modData->PlaymodID;
                 mod.m_killstamp = time(0) + (time_t)modData->Duration;
@@ -213,7 +237,8 @@ class PlaymodTimersOverlay : public patch::BasePatch
                 if (pair != g_modIcons.end())
                     mod.m_iconID = pair->second;
                 g_activeMods.push_back(mod);
-                OnRefreshOverlay();
+                if (DoesTimerOverlayExist())
+                    OnRefreshOverlay();
             }
             break;
         }
@@ -221,7 +246,7 @@ class PlaymodTimersOverlay : public patch::BasePatch
         {
             if (packet->dataLength < ((ToParse * 6) + 10))
             {
-                printf("invalid bulk data payload.\n");
+                printf("[PlaymodOverlays] invalid bulk data payload.\n");
                 break;
             }
             int offset = 10;
@@ -245,7 +270,8 @@ class PlaymodTimersOverlay : public patch::BasePatch
                     mod.m_iconID = pair->second;
                 g_activeMods.push_back(mod);
             }
-            OnRefreshOverlay();
+            if (DoesTimerOverlayExist())
+                OnRefreshOverlay();
             break;
         }
         case PLAYMOD_PROTOCOL_UPDATE_ICON_DATA:
@@ -253,7 +279,7 @@ class PlaymodTimersOverlay : public patch::BasePatch
             // size check
             if (packet->dataLength < ((ToParse * 4) + 10))
             {
-                printf("invalid icon data payload.\n");
+                printf("[PlaymodOverlays] invalid icon data payload.\n");
                 break;
             }
             int offset = 10;
@@ -328,15 +354,23 @@ class PlaymodTimersOverlay : public patch::BasePatch
             return;
         std::vector<Entity*> pTimerEnts;
         pOverlayEnt->GetEntitiesByName(&pTimerEnts, "PlaymodTimerEntity");
+        bool bFound = false;
         for (auto it = pTimerEnts.begin(); it != pTimerEnts.end(); it++)
         {
             PlaymodTimerEntity* pTimerEnt = reinterpret_cast<PlaymodTimerEntity*>(*it);
             if (pTimerEnt->m_trackableID == PlaymodID)
             {
                 pTimerEnt->m_killstamp = killstamp;
+                // Reset killables and force-rerender the timer on match
+                pTimerEnt->m_bKillable = false;
+                pTimerEnt->m_lastUpdate = 0;
+                pTimerEnt->OnUpdate(nullptr);
+                bFound = true;
                 break;
             }
         }
+        if (!bFound)
+            OnRefreshOverlay();
     }
 
     static void OnRefreshOverlay()
