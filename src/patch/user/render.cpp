@@ -680,6 +680,37 @@ class DaVinciFakeID : public patch::BasePatch
 };
 REGISTER_USER_GAME_PATCH(DaVinciFakeID, fake_davinci_id);
 
+class LegendaryWingsPatch : public patch::BasePatch
+{
+  public:
+    void apply() const override
+    {
+        // V3.02 unpatched will render Da Vinci wings when wearing Legendary Wings, likely as
+        // outcome of changing Da Vinci Wings ID earlier. You can see from the game disassembly,
+        // that legendary wings get pointed to a correct surface at first.
+        // ---
+        // if (ItemID == ITEM_ID_LEGENDARY_WINGS) {
+        //    plVar14 = *(Surface **)(this + 0xd8);
+        //    pIVar25 = pIVar26;
+        //    goto LAB_14012fb26;
+        // }
+        // ---
+        // However, when the unconditional jump is done, it will reach a code path that instead
+        // points the surface to (this + 0xe0) (Da Vinci Wings).
+        // Since we already have a valid surface pointed, we can just skip a little bit forwards to
+        // just rendering the item. This fixes the issue while keeping both items functional and
+        // does not seem to break any other back items.
+
+        auto& game = game::GameHarness::get();
+        auto addr =
+            game.findMemoryPattern<uint8_t*>("E9 ? ? ? ? 81 FE CE 24 00 00 75 0C 4D 8B A6 E8 00 00 "
+                                             "00 E9 ? ? ? ? 81 FE 9A 1E 00 00 74 08");
+        // E9 84 00 00 00 -> E9 DF 00 00 00, rel32 jump changed from 132 bytes to 223.
+        utils::fillMemory(addr + 1, 1, 0xDF);
+    }
+};
+REGISTER_USER_GAME_PATCH(LegendaryWingsPatch, legendary_wing_patch);
+
 static bool g_bLightSourcesOptimized = true;
 static int g_fLightSourceOptimizeLevel = 5;
 class LightSourceOptimizer : public patch::BasePatch
@@ -900,7 +931,8 @@ class LiveGUIRebuilder : public patch::BasePatch
     static void __fastcall OnPressingBackDuringGameplay()
     {
         Entity* pGUI = real::GetApp()->m_entityRoot->GetEntityByName("GUI");
-        if (!pGUI->GetEntityByName("OptionsMenu") && !pGUI->GetEntityByName("ResolutionMenu") && !pGUI->GetEntityByName("OptionsPage"))
+        if (!pGUI->GetEntityByName("OptionsMenu") && !pGUI->GetEntityByName("ResolutionMenu") &&
+            !pGUI->GetEntityByName("OptionsPage"))
             real::OnPressingBackDuringGameplay();
     }
 
