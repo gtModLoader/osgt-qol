@@ -320,6 +320,10 @@ void OptionPageOnSelect(VariantList* pVL)
 {
     if (pVL->Get(1).GetEntity()->GetName() == "Back")
     {
+        // Kill the hotkey from repeat-firing, otherwise spamming esc can cause some weirdness.
+        pVL->Get(1).GetEntity()->RemoveComponentByName("SelectButtonWithCustomInput");
+
+        // Kill rest of the menu and recreate original options.
         Entity* pParentEnt = pVL->Get(1).GetEntity()->GetParent();
         real::SlideScreen(pParentEnt, 0, 500, 0);
         real::MessageManagerCallEntityFunction(real::GetMessageManager(), pParentEnt, 500,
@@ -335,6 +339,10 @@ void OptionsManager::HandleOptionPageButton(VariantList* pVL)
     // Kill the main options menu so we don't click-through it.
     Entity* pParentEnt = pVL->Get(1).GetEntity()->GetParent()->GetParent()->GetParent();
     uint32_t bFromMainMenu = pParentEnt->GetVar("FromMainMenu")->GetUINT32();
+
+    // Kill the hotkey from repeat-firing, otherwise spamming esc can cause some weirdness.
+    Entity* pParentBackBtn = pParentEnt->GetEntityByName("Back");
+    pParentBackBtn->RemoveComponentByName("SelectButtonWithCustomInput");
 
     real::DisableAllButtonsEntity(pParentEnt, true);
     real::SlideScreen(pParentEnt, 0, 500, 0);
@@ -458,7 +466,8 @@ void OptionsManager::OptionsMenuAddContent(void* pEnt, void* unk2, void* unk3, v
         // or iterate over the list 5 separate times.
         if (i > 0 || ent->GetName() == "support")
         {
-            // Fix the alignment manually. It's not exactly "perfect", but it beats vanilla alignment.
+            // Fix the alignment manually. It's not exactly "perfect", but it beats vanilla
+            // alignment.
             CL_Vec2f pos2d = ent->GetVar("pos2d")->GetVector2();
             pos2d.x += real::iPadMapY(10.0f);
             ent->GetVar("pos2d")->Set(pos2d);

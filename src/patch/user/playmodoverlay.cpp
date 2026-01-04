@@ -33,6 +33,9 @@ REGISTER_GAME_FUNCTION(SendPacket,
                        "4D 85 C0 74 78 48 89 5C 24 10 48 89 6C 24 18 57 48 83 EC 20 48 8B DA 48 89 "
                        "74 24 30 48 8B 52 10 8B E9 33 C9 49 8B F8 48 83 C2 05 44 8D 41 01 E8",
                        __fastcall, void, int, std::string, void*);
+REGISTER_GAME_FUNCTION(GameLogicComponentKillWorld,
+                       "48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 0F B6 FA 48 8B D9 E8",
+                       __fastcall, void, GameLogicComponent*, bool);
 
 static std::vector<ActiveMod> g_activeMods;
 static std::map<short, short> g_modIcons;
@@ -93,6 +96,11 @@ class PlaymodTimersOverlay : public patch::BasePatch
         game.hookFunctionPatternDirect<OnLogGrabBarChanged_t>(
             pattern::OnLogGrabBarChanged, OnLogGrabBarChanged, &real::OnLogGrabBarChanged);
 
+        // We should cleanup when player leaves world as well, so we need to know an event for it.
+        game.hookFunctionPatternDirect<GameLogicComponentKillWorld_t>(
+            pattern::GameLogicComponentKillWorld, GameLogicComponentKillWorld,
+            &real::GameLogicComponentKillWorld);
+
         // We need to signal to server we are modded user.
         real::SendPacket = game.findMemoryPattern<SendPacket_t>(pattern::SendPacket);
 
@@ -102,12 +110,8 @@ class PlaymodTimersOverlay : public patch::BasePatch
         // TODO: Clear UI on server exit.
     }
 
-    static void refreshItemDB()
+    static void __fastcall GameLogicComponentKillWorld(GameLogicComponent* this_, bool bUnk)
     {
-        g_activeMods.clear();
-        // We signal the server we want playmod data and that we are modded user.
-        real::SendPacket(2, "action|enable_mod\nname|playmod_overlay\n",
-                         real::GetApp()->m_pClient->m_pEnetPeer);
         // Clear any old ui
         Entity* pWorldSpecificGUI =
             real::GetApp()->m_entityRoot->GetEntityByName("GUI")->GetEntityByName(
@@ -115,6 +119,15 @@ class PlaymodTimersOverlay : public patch::BasePatch
         if (pWorldSpecificGUI)
             pWorldSpecificGUI->RemoveEntityByAddress(
                 pWorldSpecificGUI->GetEntityByName("TimerOverlay"));
+        real::GameLogicComponentKillWorld(this_, bUnk);
+    }
+
+    static void refreshItemDB()
+    {
+        g_activeMods.clear();
+        // We signal the server we want playmod data and that we are modded user.
+        real::SendPacket(2, "action|enable_mod\nname|playmod_overlay\nproto|1\n",
+                         real::GetApp()->m_pClient->m_pEnetPeer);
     }
 
     static void OnLogGrabBarChanged(Variant* pV)
