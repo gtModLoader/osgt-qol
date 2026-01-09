@@ -19,6 +19,8 @@ set (SOURCES
     game/struct/graphics/surface.cpp
     patch/patch.cpp
     utils/utils.cpp
+
+    res/icon.rc
 )
 set (SOURCES_USER_PATCHES
     patch/user/audio.cpp

@@ -2,6 +2,8 @@
 #include <mmeapi.h>
 #include <psapi.h>
 
+#include "res/resources.h"
+
 namespace game
 {
 
@@ -27,7 +29,8 @@ void GameHarness::initialize()
     MH_STATUS status = MH_Initialize();
     if (status != MH_OK)
     {
-        throw std::runtime_error("Failed to initialize MinHook: " + std::string(MH_StatusToString(status)));
+        throw std::runtime_error("Failed to initialize MinHook: " +
+                                 std::string(MH_StatusToString(status)));
     }
 
     // Block function until game processes this message. This lets us know the game is in an
@@ -46,4 +49,15 @@ void GameHarness::updateWindowHandle()
     if (window == nullptr)
         throw std::runtime_error("Failed to get game window handle.");
 }
+
+void GameHarness::setWindowModdedIcon()
+{
+    HICON hIcon = LoadIcon(GetModuleHandle("dinput8.dll"), MAKEINTRESOURCE(IDI_OSGT1));
+    if (hIcon)
+    {
+        SendMessage(window, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+        SendMessage(window, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+    }
+}
+
 } // namespace game

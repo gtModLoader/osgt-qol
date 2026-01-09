@@ -30,6 +30,8 @@ void setup()
         // Initialize modding APIs and load patches.
         game.toggleLoadScreen();
         game.resolveRenderSigs();
+        game.setWindowModdedIcon();
+        game.setWindowTitle("Growtopia [OSGT-QOL]");
         optionsMgr.initialize();
         optionsMgr.addOptionPage("qol", "OSGT-QOL Settings");
         input.initialize();
@@ -37,7 +39,8 @@ void setup()
         weatherMgr.initialize();
         patchMgr.applyPatchesFromFile("patches.txt");
         game.toggleLoadScreen();
-        game.setWindowTitle("Growtopia [OSGT-QOL]");
+        // reload icon as InitVideo may mess this up.
+        game.setWindowModdedIcon();
         std::fprintf(stderr, "Done applying patches.\n");
     }
     catch (const std::exception& e)

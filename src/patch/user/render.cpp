@@ -957,6 +957,10 @@ class LiveGUIRebuilder : public patch::BasePatch
                     Entity* pGameMenu = pWGUI->GetEntityByName("GameMenu");
                     pWGUI->RemoveEntityByAddress(pGameMenu);
                     real::GameMenuCreate(pWGUI);
+
+                    // Restore game window icon
+                    auto& game = game::GameHarness::get();
+                    game.setWindowModdedIcon();
                     return;
                 }
             }

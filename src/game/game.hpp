@@ -82,6 +82,8 @@ class GameHarness
 
     void updateWindowHandle();
 
+    void setWindowModdedIcon();
+
     // Sets the game window visibility.
     inline void setWindowVisible(bool visible) const
     {
