@@ -6,10 +6,13 @@
 # osgt-qol
 </div>
 
-osgt-qol is a quality of life mod for Growtopia 3.02 64-bit Windows clients aimed at Oldschool Growtopia players. It features various quality of life, security changes and game extensions.
+osgt-qol is a quality of life mod for Growtopia 3.02 64-bit Windows clients aimed at Oldschool Growtopia players. It features various quality of life and security changes along extending several limitations of the vanilla game client.
+
+> [!NOTE]
+> This repository is provided as a Proof-of-Concept. The core maintainers of the project are currently working on a rewrite. Contributions are still very much welcome, things done here will be relevant for the rewrite.
 
 ## Installation
-Navigate to [Releases](https://github.com/houzeyhoo/osgt-qol/releases) section and download the latest `osgt-qol-*.zip` package.
+Navigate to [Releases](https://github.com/gtModLoader/osgt-qol-poc/releases) section and download the latest `osgt-qol-*.zip` package.
 Open the downloaded zip file then drag and drop `dinput8.dll` to your Growtopia installation folder.
 
 If you are unsure how to find your installation folder, press Windows Key + R and paste in `%LocalAppData%\Growtopia` then press Enter.
@@ -25,7 +28,7 @@ Optionally, you can edit the newly created shortcut by selecting dinput8.dll for
 Open your Growtopia installation folder and delete `dinput8.dll` file.
 
 ## Configuration
-Currently, if you wish to disable any specific mod, you will need to download the [patches.txt](https://raw.githubusercontent.com/houzeyhoo/osgt-qol/refs/heads/main/patches.txt) file from this repository and place it in the same folder as the mod.
+Currently, if you wish to disable any specific mod, you will need to download the [patches.txt](https://raw.githubusercontent.com/gtModLoader/osgt-qol-poc/refs/heads/main/patches.txt) file from this repository and place it in the same folder as the mod.
 By default, without this file, osgt-qol will enable all of the built-in mods.
 
 ## Features
@@ -64,7 +67,6 @@ User Patches:
 When Growtopia switched to using BGFX as its rendering framework, Windows clients started using DirectX9 as opposed to OpenGL. With this transition, several visuals broke.
 You may be interested in installing [dxvk](https://github.com/doitsujin/dxvk) as it resolves some of the blending issues (most notably Sunset/beach weather).
 
-## Future of project
-As osgt-qol grew in scope, so did its ambitions. The current framework present in this repository has outgrown its ambitions. In order to fully support these ambitions, we are going to work on a follow-up proper modloader "gtModLoader". We cannot promise the full scope of it yet or a rough release date, but it will be more in line with mod loaders you are used to seeing in other games.
-
-If you are interested in contributing to osgt-qol, don't feel discouraged, any efforts made here will be ported over to gtModLoader variant of this mod when time comes.
+## Credits / Contributors
+- cernodile - creating the contents and logic of patches used in osgt-qol, reverse engineering client structures and classes
+- houzeyhoo - creating the underlying patch framework
