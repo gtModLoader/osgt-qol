@@ -265,8 +265,8 @@
 #  define BOOST_COMPILER "Microsoft Visual C++ version " BOOST_STRINGIZE(BOOST_COMPILER_VERSION)
 #endif
 
-//
-// last known and checked version is 18.00.20827.3 (VC12 RC, aka 2013 RC):
+// PATCH: Allow for suppression of the version check to silence warnings on modern compilers
+#ifndef BOOST_SKIP_MSVC_VERSION_CHECK
 #if (_MSC_VER > 1800 && _MSC_FULL_VER > 180020827)
 #  if defined(BOOST_ASSERT_CONFIG)
 #     error "Unknown compiler version - please run the configure tests and report the results"
@@ -274,3 +274,4 @@
 #     pragma message("Unknown compiler version - please run the configure tests and report the results")
 #  endif
 #endif
+#endif // BOOST_SKIP_MSVC_VERSION_CHECK
