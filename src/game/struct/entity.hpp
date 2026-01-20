@@ -243,7 +243,7 @@ class Entity : public boost::signals::trackable
 
     void PrintTreeAsText(int indent = 0)
     {
-#ifndef NDEBUG
+#ifdef DEVELOPMENT
         std::string us;
 
         for (int i = 0; i < indent; i++)

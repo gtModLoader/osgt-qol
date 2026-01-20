@@ -1,9 +1,14 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.25)
 project(osgt-qol LANGUAGES CXX C)
 
-# Only allow compiling via 64-bit MSVC.
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Must use /MD regardless of build type to match the game's runtime
+set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+
 if(NOT MSVC OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-    message(FATAL_ERROR "Only 64-bit MSVC is supported.")
+    message(FATAL_ERROR "${PROJECT_NAME} requires MSVC and a 64-bit target")
 endif()
 
 add_subdirectory(vendor)

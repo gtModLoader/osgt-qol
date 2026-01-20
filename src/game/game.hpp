@@ -5,8 +5,6 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 #include "utils/utils.hpp"
@@ -270,9 +268,10 @@ class OptionsManager
         optionPages[page].sections[section].push_back(option);
     }
 
-    void addMultiChoiceOptionDoubleButtons(std::string page, std::string section, std::string varName,
-                              std::string displayName, std::vector<std::string>& displayOptions,
-                              VariantListCallback pCallback, float vModSizeX = 0)
+    void addMultiChoiceOptionDoubleButtons(std::string page, std::string section,
+                                           std::string varName, std::string displayName,
+                                           std::vector<std::string>& displayOptions,
+                                           VariantListCallback pCallback, float vModSizeX = 0)
     {
 #ifdef DEBUG
         if (optionPages.find(page) == optionPages.end())

@@ -1,26 +1,23 @@
 #pragma once
 #include "entity.hpp"
 #include "gametimer.hpp"
+#include "rtfont.hpp"
 #include <cstdint>
 #include <string>
-#include "rtfont.hpp"
-
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-
 
 class Console
 {
-public:
-	Console();
-	virtual ~Console() {};
-	void SetMaxLines(unsigned int num) {m_maxLines = num;}
+  public:
+    Console();
+    virtual ~Console() {};
+    void SetMaxLines(unsigned int num) { m_maxLines = num; }
 
-	boost::signal<void()> m_sig_on_text_added;
+    boost::signal<void()> m_sig_on_text_added;
 
-	unsigned int m_maxLines;
-	std::deque<std::string> m_log;
-  uint8_t padding[76];
+    unsigned int m_maxLines;
+    std::deque<std::string> m_log;
+    uint8_t padding[76];
 };
 static_assert(sizeof(Console) == 176, "Console class size mismatch. ");
 
@@ -69,7 +66,7 @@ class BaseApp
     GameTimer m_gameTimer;
     Console m_console;
     RTFont m_fontArray[4];
-    uint8_t m_OSMessages[40];     // A deque with <OSMessage>
+    uint8_t m_OSMessages[40]; // A deque with <OSMessage>
     bool m_bManualRotation;
     uint8_t padding2[7];
     uint8_t m_resourceManager[24];

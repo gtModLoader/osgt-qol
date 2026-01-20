@@ -1,41 +1,51 @@
 {
     "version": 8,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 25
+    },
     "configurePresets": [
         {
             "name": "base",
+            "hidden": true,
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_CXX_COMPILER": "cl.exe",
+                "CMAKE_C_COMPILER": "cl.exe"
+            },
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
-            },
-            "cacheVariables": {
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
-                "CMAKE_CXX_COMPILER": "cl.exe",
-                "CMAKE_C_COMPILER": "cl.exe",
-                "CMAKE_CXX_STANDARD": "14",
-                "CMAKE_C_FLAGS": "-D_CRT_SECURE_NO_WARNINGS",
-                "CMAKE_CXX_FLAGS": "-D_CRT_SECURE_NO_WARNINGS /EHsc"
-            },
-            "hidden": true
+            }
         },
         {
-            "name": "Release",
-            "inherits": ["base"],
-            "description": "Release build fit for public usage.",
+            "name": "release",
+            "displayName": "Release (x64)",
+            "inherits": "base",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {
-            "name": "Debug",
-            "inherits": ["base"],
-            "description": "Debug build meant only for development.",
+            "name": "develop",
+            "displayName": "Development (x64)",
+            "inherits": "base",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_C_FLAGS_DEBUG": "/MD",
-                "CMAKE_CXX_FLAGS_DEBUG": "/MD"
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "DEVELOPMENT_BUILD": "ON"
             }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "release",
+            "configurePreset": "release"
+        },
+        {
+            "name": "develop",
+            "configurePreset": "develop"
         }
     ]
 }

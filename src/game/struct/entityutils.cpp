@@ -18,6 +18,9 @@ void SetTextShadowColor(Entity* pEnt, uint32_t color)
 
     if (!pComp)
     {
+        // TODO: This will not trigger in development builds anymore. replace with a custom assert
+        // macro that doesn't rely on NDEBUG, and instead relies on our own DEVELOPMENT macro. As of
+        // now, this is the only assertion in the codebase
         assert(!"Huh?");
         return;
     }

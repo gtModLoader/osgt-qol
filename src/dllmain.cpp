@@ -1,9 +1,6 @@
 #include "game/game.hpp"
 #include "patch/patch.hpp"
 #include <string>
-
-#define WIN32_LEAN_AND_MEAN
-#include <mmeapi.h>
 #include <windows.h>
 
 #define EXPORT extern "C" __declspec(dllexport)
@@ -12,7 +9,7 @@
 void setup()
 {
     SetThreadDescription(GetCurrentThread(), L"OSGT-QOL Mod Thread");
-#ifndef NDEBUG
+#ifdef DEVELOPMENT
     // Create a console window for debug builds.
     AllocConsole();
     freopen("CONOUT$", "w", stdout);
@@ -45,7 +42,7 @@ void setup()
     }
     catch (const std::exception& e)
     {
-#ifndef NDEBUG
+#ifdef DEVELOPMENT
         // Output error to console.
         std::fprintf(stderr, "FATAL: %s\n", e.what());
         return;

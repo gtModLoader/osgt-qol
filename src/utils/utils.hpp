@@ -2,8 +2,6 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 // Container for a memory pattern where std::nullopt represents a wildcard byte.
