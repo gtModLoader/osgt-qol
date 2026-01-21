@@ -1,5 +1,6 @@
 #pragma once
 #include "game/struct/app.hpp"
+#include "game/struct/gamepadmanager.hpp"
 
 #define DEFINE_GAME_FUNCTION(name, conv, ret, ...)                                                 \
     using name##_t = ret(conv*)(__VA_ARGS__);                                                      \
@@ -51,7 +52,8 @@ DEFINE_GAME_FUNCTION(SetupTextEntity, __fastcall, void, Entity*, uint32_t eFontI
 DEFINE_GAME_FUNCTION(GetFontAndScaleToFitThisLinesPerScreenY, __fastcall, void, uint32_t& fontID,
                      float& fontScale, float lines);
 DEFINE_GAME_FUNCTION(AddBMPRectAroundEntity, __fastcall, void, Entity* pEnt, uint32_t col1,
-                     uint32_t col2, float padding, bool bUnk, float fontScale, uint32_t fontID, bool bUnk4);
+                     uint32_t col2, float padding, bool bUnk, float fontScale, uint32_t fontID,
+                     bool bUnk4);
 DEFINE_GAME_FUNCTION(FadeInEntity, __fastcall, void, Entity* pEnt, bool bRecursive, int timeMS,
                      int delayMS, float fadeTarget, int timing);
 DEFINE_GAME_FUNCTION(MainMenuCreate, __fastcall, void, Entity*, bool);
@@ -65,6 +67,7 @@ DEFINE_GAME_FUNCTION(GetArcadeComponent, __fastcall, EntityComponent*);
 DEFINE_GAME_FUNCTION(AddKeyBinding, __fastcall, void, EntityComponent* pComp, std::string name,
                      uint32_t inputcode, uint32_t outputcode, bool bAlsoSendAsNormalRawKey,
                      uint32_t modifiersRequired);
+DEFINE_GAME_FUNCTION(GetGamepadManager, __fastcall, GamepadManager*);
 
 // Declared in weathermanager.cpp
 DEFINE_GAME_FUNCTION(WorldRendererForceBackground, __thiscall, void, uint8_t*, int, void*, void*);

@@ -1,4 +1,5 @@
 #include "game.hpp"
+#include "game/struct/gamepadmanager.hpp"
 #include "signatures.hpp"
 
 REGISTER_GAME_FUNCTION(NetControllerLocalOnArcadeInput,
@@ -28,6 +29,9 @@ REGISTER_GAME_FUNCTION(AddKeyBinding, "40 55 56 57 48 8D AC 24 50 FD FF FF 48 81
                        uint32_t outputcode, bool bAlsoSendAsNormalRawKey,
                        uint32_t modifiersRequired);
 
+REGISTER_GAME_FUNCTION(GetGamepadManager,
+                       "E8 ? ? ? ? 48 8B 48 28 48 2B 48 20 48 C1 F9 03 48 85 C9 74 3E", __fastcall,
+                       GamepadManager*);
 namespace game
 {
 
@@ -44,6 +48,9 @@ void game::InputEvents::initialize()
     real::GetArcadeComponent = utils::resolveRelativeCall<GetArcadeComponent_t>(
         game.findMemoryPattern<uint8_t*>(pattern::GetArcadeComponent));
     real::AddKeyBinding = game.findMemoryPattern<AddKeyBinding_t>(pattern::AddKeyBinding);
+
+    real::GetGamepadManager = utils::resolveRelativeCall<GetGamepadManager_t>(
+        game.findMemoryPattern<uint8_t*>(pattern::GetGamepadManager));
 
     // Hook.
     game.hookFunctionPatternDirect<NetControllerLocalOnArcadeInput_t>(

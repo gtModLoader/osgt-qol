@@ -32,6 +32,12 @@ REGISTER_GAME_FUNCTION(VideoModeManagerSetVideoMode,
                        "89 44 24 58 48 8B D9 48 C7 44 24 50 0F 00 00 00",
                        __fastcall, void, VideoModeManager*);
 
+REGISTER_GAME_FUNCTION(
+    GamepadConnectToArcadeComponent,
+    "40 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 60 FF FF FF 48 81 EC A0 01 00 00 48 C7 44 24 "
+    "50 FE FF FF FF 48 89 9C 24 F0 01 00 00 48 8B ? ? ? ? ? 48 33 C4 48 89 85 90 00 00 00 45 0F B6",
+    __fastcall, void, void*, EntityComponent* pComp, bool, bool);
+
 class SaveAndLogLocationFixer : public patch::BasePatch
 {
   public:
@@ -57,6 +63,11 @@ class SaveAndLogLocationFixer : public patch::BasePatch
             game.findMemoryPattern<GetVideoModeManager_t>(pattern::GetVideoModeManager);
         real::VideoModeManagerSetVideoMode = game.findMemoryPattern<VideoModeManagerSetVideoMode_t>(
             pattern::VideoModeManagerSetVideoMode);
+
+        // We also need to rearm gamepad stuff when InitVideo is called.
+        real::GamepadConnectToArcadeComponent =
+            game.findMemoryPattern<GamepadConnectToArcadeComponent_t>(
+                pattern::GamepadConnectToArcadeComponent);
 
         // We will replace normal AppData path with Current Directory.
         game.hookFunctionPatternDirect<GetSavePath_t>(pattern::GetSavePath, GetSavePath,
@@ -114,6 +125,28 @@ class SaveAndLogLocationFixer : public patch::BasePatch
         game.updateWindowHandle();
         game.setWindowTitle("");
         game.setWindowModdedIcon();
+
+        // When the game makes a new window, it doesn't rebind gamepads, so we'll have to do it
+        // ourself here.
+        GamepadManager* ptr = real::GetGamepadManager();
+
+        // Maybe we're still initialising from the setup, don't prematurely kill anything yet...
+        if (ptr->m_providers.size() == 0)
+            return retVal;
+        ptr->ClearGamepads();
+        (*ptr->m_providers.begin())->Kill();
+        (*ptr->m_providers.begin())->Init();
+
+        // We also need to reconnect to arcadecomp since that is also gone when we got rid of the
+        // gamepads.
+
+        if (real::GetArcadeComponent())
+        {
+            for (auto it = ptr->m_gamepads.begin(); it != ptr->m_gamepads.end(); it++)
+            {
+                real::GamepadConnectToArcadeComponent(*it, real::GetArcadeComponent(), 1, 1);
+            }
+        }
         return retVal;
     }
 };
