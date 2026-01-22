@@ -55,5 +55,3 @@ dkms.conf
 build/*
 .vscode/*
 .cache/*
-copy_to_game_dir.ps1
-release_files.zip
