@@ -176,6 +176,11 @@ class CustomizedTitleScreen : public patch::BasePatch
         game.hookFunctionPatternDirect<MainMenuCreate_t>(pattern::MainMenuCreate, MainMenuCreate,
                                                          &real::MainMenuCreate);
 
+        // Are we launching OSGT-QOL for the first time? If so, set a default other than Sunny.
+        Variant* pVariant = real::GetApp()->GetVar("osgt_qol_title_bg");
+        if (pVariant->GetType() == Variant::TYPE_UNUSED)
+            pVariant->Set(10U);
+
         // We will allow the end-user to change their title screen weather preference
         auto& optionsMgr = game::OptionsManager::get();
         // Populate our options
@@ -254,9 +259,9 @@ class CustomizedTitleScreen : public patch::BasePatch
         CL_Vec2f m_verLabelSize = pVerLabel->GetVar("size2d")->GetVector2();
 
         std::string versionText = "`wOSGT-QOL " OSGT_QOL_DISPLAY_VERSION "``";
-        Entity* pTextLabel =
-            real::CreateTextLabelEntity(pEnt->GetEntityByName("MainMenu"), "mltxt", 0,
-                                        m_verLabelPos.y - m_verLabelSize.y, versionText);
+        Entity* pTextLabel = real::CreateTextLabelEntity(
+            pEnt->GetEntityByName("MainMenu"), "mltxt", real::iPhoneMapX(5.0f),
+            m_verLabelPos.y - m_verLabelSize.y, versionText);
 
         // Retrieve fontscale and scale created entity
         uint32_t fontID;
