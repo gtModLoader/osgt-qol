@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.25)
 # Make sure to always include the version patch number
 project(osgt-qol LANGUAGES CXX C VERSION 0.9.1)
 
+# In case somebody isn't using our presets
+option(DEVELOPMENT_BUILD "Enable development features" OFF)
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 

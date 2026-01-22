@@ -69,7 +69,7 @@ class AboutMenuAttribution : public patch::BasePatch
         auto patches = patch::PatchManager::get().getAppliedUserPatchList();
 
         std::string firstLine = "\nOSGT-QOL " OSGT_QOL_DISPLAY_VERSION;
-#ifdef DEVELOPMENT
+#ifdef OSGT_QOL_DEVELOPMENT
         firstLine += " (Development Build)\n";
 #else
         firstLine += "\n";

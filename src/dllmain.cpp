@@ -25,7 +25,7 @@ void showErrorMessageBox(const std::string& message)
 
 void setup()
 {
-#ifdef DEVELOPMENT
+#ifdef OSGT_QOL_DEVELOPMENT
     createDebugConsole();
     std::fprintf(stderr, "OSGT-QOL " OSGT_QOL_DISPLAY_VERSION " (" OSGT_QOL_VERSION ")\n");
 #endif
