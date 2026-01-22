@@ -1,0 +1,73 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "[vV]*"
+    paths-ignore:
+      - LICENSE
+      - README.md
+      - scripts/*
+      - .clangd
+      - .clang-format
+      - .gitignore
+
+jobs:
+  build:
+    name: Build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure CMake
+        run: cmake --preset=release
+
+      - name: Build project
+        run: cmake --build --preset=release
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dinput8.dll
+          path: build/release/src/dinput8.dll
+
+  release:
+    name: Release
+    needs: build
+    # Only run if tag is present
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dinput8.dll
+          path: staging
+
+      - name: Copy configuration files
+        shell: pwsh
+        run: >
+          Copy-Item "patches.txt" -Destination "staging/"
+
+      - name: Package artifact
+        shell: pwsh
+        run: >
+          Compress-Archive -Path "staging/*" -DestinationPath "osgt-qol-${{ github.ref_name }}.zip" -Force
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: osgt-qol-${{ github.ref_name }}.zip
+          generate_release_notes: true
+          # Create a draft so we can replace the changelogs manually prior to publishing
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
