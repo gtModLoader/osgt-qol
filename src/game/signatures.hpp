@@ -62,6 +62,7 @@ DEFINE_GAME_FUNCTION(SetupEntityIconFromItem, __fastcall, Entity*, int* ItemID,
 DEFINE_GAME_FUNCTION(CreateOverlayEntity, __fastcall, Entity*, Entity* pParentEnt,
                      const std::string name, const std::string fileName, float x, float y);
 DEFINE_GAME_FUNCTION(EntitySetScaleBySize, __fastcall, void, Entity*, CL_Vec2f&, bool, bool);
+DEFINE_GAME_FUNCTION(SendPacket, __fastcall, void, int, std::string, void*);
 // Declared in input.cpp
 DEFINE_GAME_FUNCTION(GetArcadeComponent, __fastcall, EntityComponent*);
 DEFINE_GAME_FUNCTION(AddKeyBinding, __fastcall, void, EntityComponent* pComp, std::string name,

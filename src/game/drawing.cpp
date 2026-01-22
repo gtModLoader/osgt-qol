@@ -121,7 +121,10 @@ REGISTER_GAME_FUNCTION(SetupEntityIconFromItem,
                        "FF 48 89 58 18 48 89 70 20 48 8B ? ? ? ? ? 48 33 C4 48 89 45 37",
                        __fastcall, Entity*, int* ItemID, Entity* ParentEntity, CL_Vec2f* Position,
                        int, bool bDrawBorder);
-
+REGISTER_GAME_FUNCTION(SendPacket,
+                       "4D 85 C0 74 78 48 89 5C 24 10 48 89 6C 24 18 57 48 83 EC 20 48 8B DA 48 89 "
+                       "74 24 30 48 8B 52 10 8B E9 33 C9 49 8B F8 48 83 C2 05 44 8D 41 01 E8",
+                       __fastcall, void, int, std::string, void*);
 namespace game
 {
 void GameHarness::resolveSharedSigs()
@@ -156,6 +159,7 @@ void GameHarness::resolveSharedSigs()
     real::FadeInEntity = findMemoryPattern<FadeInEntity_t>(pattern::FadeInEntity);
     real::SetupEntityIconFromItem =
         findMemoryPattern<SetupEntityIconFromItem_t>(pattern::SetupEntityIconFromItem);
+    real::SendPacket = findMemoryPattern<SendPacket_t>(pattern::SendPacket);
 }
 
 // /!\ Out of Order!

@@ -29,10 +29,6 @@ REGISTER_GAME_FUNCTION(
     "48 89 70 10 48 89 78 18 4C 89 60 20 0F 29 70 D8 44 0F 29 40 C8 48 8B ? ? ? ? ? 48 33 C4 48 89 "
     "45 17 E8 ? ? ? ? 48 85 C0 0F 84 ? ? ? ? 48 C7 45 0F 0F 00 00 00",
     __fastcall, void, Variant*);
-REGISTER_GAME_FUNCTION(SendPacket,
-                       "4D 85 C0 74 78 48 89 5C 24 10 48 89 6C 24 18 57 48 83 EC 20 48 8B DA 48 89 "
-                       "74 24 30 48 8B 52 10 8B E9 33 C9 49 8B F8 48 83 C2 05 44 8D 41 01 E8",
-                       __fastcall, void, int, std::string, void*);
 REGISTER_GAME_FUNCTION(GameLogicComponentKillWorld,
                        "48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 0F B6 FA 48 8B D9 E8",
                        __fastcall, void, GameLogicComponent*, bool);
@@ -100,9 +96,6 @@ class PlaymodTimersOverlay : public patch::BasePatch
         game.hookFunctionPatternDirect<GameLogicComponentKillWorld_t>(
             pattern::GameLogicComponentKillWorld, GameLogicComponentKillWorld,
             &real::GameLogicComponentKillWorld);
-
-        // We need to signal to server we are modded user.
-        real::SendPacket = game.findMemoryPattern<SendPacket_t>(pattern::SendPacket);
 
         // LoadFromMem is a good enough signal that we should ask for playmod data.
         auto& itemapi = game::ItemAPI::get();
