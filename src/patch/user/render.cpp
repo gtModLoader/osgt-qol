@@ -140,10 +140,6 @@ REGISTER_GAME_FUNCTION(OnPressingBackDuringGameplay,
                        "48 8B C4 55 41 56 41 57 48 8D 68 C8 48 81 EC 20 01 00 00 48 C7 44 24 28 FE "
                        "FF FF FF 48 89 58 08 48 89 70 10 48 89 78 18",
                        __fastcall, void);
-REGISTER_GAME_FUNCTION(GenericDialogMenuOnSelect,
-                       "48 8b c4 55 41 54 41 55 41 56 41 57 48 8d a8 68 fe ff ff 48 81 ec 70 02 00 "
-                       "00 48 c7 45 90 fe ff ff ff",
-                       __fastcall, void, VariantList*);
 
 static std::vector<std::string> displayNames;
 static uint32_t vanillaWeatherBound = 16;
@@ -562,7 +558,6 @@ class HideMyUI : public patch::BasePatch
 
     static void __fastcall OnArcadeInput(VariantList* pVL)
     {
-        printf("%d\n", real::GetApp()->m_playerGDPRState);
         if (pVL->Get(0).GetUINT32() == 610001)
         {
             if (real::GetApp()->GetGameLogic()->IsDialogOpened())
@@ -973,27 +968,3 @@ class LiveGUIRebuilder : public patch::BasePatch
     }
 };
 REGISTER_USER_GAME_PATCH(LiveGUIRebuilder, live_gui_rebuilder);
-
-class FixURLButtons : public patch::BasePatch
-{
-  public:
-    void apply() const override
-    {
-        // Yeah... this is kinda broken in vanilla client. If your GDPR status isn't 0 or -1
-        // (uninitialised), you can't open any URL buttons in dialogs.
-        auto& game = game::GameHarness::get();
-        game.hookFunctionPatternDirect<GenericDialogMenuOnSelect_t>(
-            pattern::GenericDialogMenuOnSelect, GenericDialogMenuOnSelect,
-            &real::GenericDialogMenuOnSelect);
-    }
-
-    static void __fastcall GenericDialogMenuOnSelect(VariantList* pVL)
-    {
-        // If "gdprState" is >= 1, the game won't even entertain you a popup.
-        int gdprState = real::GetApp()->m_playerGDPRState;
-        real::GetApp()->m_playerGDPRState = 0;
-        real::GenericDialogMenuOnSelect(pVL);
-        real::GetApp()->m_playerGDPRState = gdprState;
-    }
-};
-REGISTER_USER_GAME_PATCH(FixURLButtons, fix_url_buttons);

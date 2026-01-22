@@ -17,6 +17,10 @@ REGISTER_GAME_FUNCTION(AddSpacebarBinding,
                        "48 83 EC 58 48 83 3D ? ? ? ? ? F3 0F 10 ? ? ? ? ? F3 0F 58 ? ? ? ? ? F3 0F "
                        "11 ? ? ? ? ? 74 7B E8 ? ? ? ? E8",
                        __fastcall, void);
+REGISTER_GAME_FUNCTION(GenericDialogMenuOnSelect,
+                       "48 8b c4 55 41 54 41 55 41 56 41 57 48 8d a8 68 fe ff ff 48 81 ec 70 02 00 "
+                       "00 48 c7 45 90 fe ff ff ff",
+                       __fastcall, void, VariantList*);
 
 class QuickbarHotkeys : public patch::BasePatch
 {
@@ -148,3 +152,27 @@ class QuickToggleSpaceToPunch : public patch::BasePatch
     }
 };
 REGISTER_USER_GAME_PATCH(QuickToggleSpaceToPunch, quick_toggle_space_to_punch);
+
+class FixURLButtons : public patch::BasePatch
+{
+  public:
+    void apply() const override
+    {
+        // Yeah... this is kinda broken in vanilla client. If your GDPR status isn't 0 or -1
+        // (uninitialised), you can't open any URL buttons in dialogs.
+        auto& game = game::GameHarness::get();
+        game.hookFunctionPatternDirect<GenericDialogMenuOnSelect_t>(
+            pattern::GenericDialogMenuOnSelect, GenericDialogMenuOnSelect,
+            &real::GenericDialogMenuOnSelect);
+    }
+
+    static void __fastcall GenericDialogMenuOnSelect(VariantList* pVL)
+    {
+        // If "gdprState" is >= 1, the game won't even entertain you a popup.
+        int gdprState = real::GetApp()->m_playerGDPRState;
+        real::GetApp()->m_playerGDPRState = 0;
+        real::GenericDialogMenuOnSelect(pVL);
+        real::GetApp()->m_playerGDPRState = gdprState;
+    }
+};
+REGISTER_USER_GAME_PATCH(FixURLButtons, fix_url_buttons);
