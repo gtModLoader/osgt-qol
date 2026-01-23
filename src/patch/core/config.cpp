@@ -4,8 +4,6 @@
 
 #include "game/signatures.hpp"
 #include "game/struct/videomode.hpp"
-#include <processenv.h>
-#include <synchapi.h>
 
 REGISTER_GAME_FUNCTION(GetSavePath,
                        "48 8B C4 55 48 8D A8 38 FF FF FF 48 81 EC C0 01 00 00 48 C7 44 24 38 FE FF "
@@ -83,6 +81,10 @@ class SaveAndLogLocationFixer : public patch::BasePatch
 
         // Since we control the save path, we can reload save.dat from our new location.
         real::GetApp()->LoadVarDB();
+
+        // Also set sfx/music vols since they don't get assigned to AudioManager
+        real::GetAudioManager()->SetMusicVol(real::GetApp()->m_sharedDB.GetVarWithDefault("music_vol", 1.0f)->GetFloat());
+        real::GetAudioManager()->m_defaultVol = real::GetApp()->m_sharedDB.GetVarWithDefault("sfx_vol", 1.0f)->GetFloat();
 
         // Restore proper videomode for this save.dat
         Variant* pVariant = real::GetApp()->GetVar("savedVideoMode");

@@ -1,6 +1,7 @@
 #pragma once
 #include "game/struct/app.hpp"
 #include "game/struct/gamepadmanager.hpp"
+#include "game/struct/audiomanagerfmod.hpp"
 
 #define DEFINE_GAME_FUNCTION(name, conv, ret, ...)                                                 \
     using name##_t = ret(conv*)(__VA_ARGS__);                                                      \
@@ -63,6 +64,7 @@ DEFINE_GAME_FUNCTION(CreateOverlayEntity, __fastcall, Entity*, Entity* pParentEn
                      const std::string name, const std::string fileName, float x, float y);
 DEFINE_GAME_FUNCTION(EntitySetScaleBySize, __fastcall, void, Entity*, CL_Vec2f&, bool, bool);
 DEFINE_GAME_FUNCTION(SendPacket, __fastcall, void, int, std::string, void*);
+DEFINE_GAME_FUNCTION(GetAudioManager, __fastcall, AudioManagerFMOD*);
 // Declared in input.cpp
 DEFINE_GAME_FUNCTION(GetArcadeComponent, __fastcall, EntityComponent*);
 DEFINE_GAME_FUNCTION(AddKeyBinding, __fastcall, void, EntityComponent* pComp, std::string name,

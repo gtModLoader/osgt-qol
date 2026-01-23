@@ -125,6 +125,12 @@ REGISTER_GAME_FUNCTION(SendPacket,
                        "4D 85 C0 74 78 48 89 5C 24 10 48 89 6C 24 18 57 48 83 EC 20 48 8B DA 48 89 "
                        "74 24 30 48 8B 52 10 8B E9 33 C9 49 8B F8 48 83 C2 05 44 8D 41 01 E8",
                        __fastcall, void, int, std::string, void*);
+// GetAudioManager
+REGISTER_GAME_FUNCTION(
+    GetAudioManager,
+    "F3 44 0F 10 ? ? ? ? ? F3 44 0F 10 ? ? ? ? ? 44 38 B6 D9 02 00 00 0F 84 ? ? ? ? E8 ? ? ? ?",
+    __fastcall, AudioManagerFMOD*);
+
 namespace game
 {
 void GameHarness::resolveSharedSigs()
@@ -160,6 +166,8 @@ void GameHarness::resolveSharedSigs()
     real::SetupEntityIconFromItem =
         findMemoryPattern<SetupEntityIconFromItem_t>(pattern::SetupEntityIconFromItem);
     real::SendPacket = findMemoryPattern<SendPacket_t>(pattern::SendPacket);
+    real::GetAudioManager = utils::resolveRelativeCall<GetAudioManager_t>(
+        findMemoryPattern<uint8_t*>(pattern::GetAudioManager) + 31);
 }
 
 // /!\ Out of Order!

@@ -4,28 +4,25 @@
 #include "patch/patch.hpp"
 #include "utils/utils.hpp"
 
-// GetAudioManager
-REGISTER_GAME_FUNCTION(
-    GetAudioManager,
-    "F3 44 0F 10 ? ? ? ? ? F3 44 0F 10 ? ? ? ? ? 44 38 B6 D9 02 00 00 0F 84 ? ? ? ? E8 ? ? ? ?",
-    __fastcall, void*);
-
-// AudioManagerFMOD::SetMusicVol
-REGISTER_GAME_FUNCTION(AudioManagerFMODSetMusicVol,
-                       "40 53 48 83 EC 30 48 8B D9 0F 29 74 24 20 48 8B 89 A8 00", __fastcall, void,
-                       void* this_, float musicVol);
-
 // AudioManagerFMOD::Preload
 REGISTER_GAME_FUNCTION(AudioManagerFMODPreload,
                        "40 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 30 FF FF FF 48 81 EC "
                        "D0 01 00 00 48 C7 44 24 38 FE FF FF FF",
-                       __fastcall, void, void*, void*, bool, bool, bool, bool)
+                       __fastcall, void, AudioManagerFMOD*, void*, bool, bool, bool, bool)
 
 // AudioManagerFMOD::Play
 REGISTER_GAME_FUNCTION(AudioManagerFMODPlay,
                        "40 55 53 56 57 41 54 41 56 41 57 48 8D 6C 24 E9 48 81 EC A0 00 00 00 48 C7",
-                       __fastcall, void*, void* this_, std::string fName, bool bLooping,
+                       __fastcall, void*, AudioManagerFMOD* this_, std::string fName, bool bLooping,
                        bool bIsMusic, bool bAddBasePath, bool bForceStreaming)
+
+REGISTER_GAME_FUNCTION(
+    OnProgressChangedMusic,
+    "40 53 48 83 EC 60 48 C7 44 24 20 FE FF FF FF 0F 29 74 24 50 48 8B ? ? ? ? ? 48 33 C4 48 89 44 "
+    "24 48 48 8B D9 83 39 00 75 1E C7 01 01 00 00 00 C7 41 10 00 00 00 00 48 8B 49 40 48 85 C9 74 "
+    "08 48 8B D3 E8 ? ? ? ? F3 0F 10 73 10 48 C7 44 24 40 0F 00 00 00 48 C7 44 24 38 00 00 00 00 "
+    "C6 44 24 28 00 41 B8 09 00 00 00 48 8D",
+    __fastcall, void, Variant*);
 
 class AudioStutterPatch : public patch::BasePatch
 {
@@ -38,8 +35,8 @@ class AudioStutterPatch : public patch::BasePatch
                                        &real::AudioManagerFMODPreload);
     }
 
-    static void __fastcall AudioManagerFMODPreload(void* this_, void* unk2, bool bLooping,
-                                                   bool bIsMusic, bool bAddBasePath,
+    static void __fastcall AudioManagerFMODPreload(AudioManagerFMOD* this_, void* unk2,
+                                                   bool bLooping, bool bIsMusic, bool bAddBasePath,
                                                    bool bForceStreaming)
     {
         // Current assumption is PC client had streaming disabled because of Seth's attempt to
@@ -75,11 +72,6 @@ class StartMusicSliderBackport : public patch::BasePatch
 
         auto& game = game::GameHarness::get();
 
-        real::GetAudioManager = utils::resolveRelativeCall<GetAudioManager_t>(
-            game.findMemoryPattern<uint8_t*>(pattern::GetAudioManager) + 31);
-        real::AudioManagerFMODSetMusicVol = game.findMemoryPattern<AudioManagerFMODSetMusicVol_t>(
-            pattern::AudioManagerFMODSetMusicVol);
-
         // We re-use "start_vol" variable from newer client. Modern client users get to keep their
         // preference.
         Variant* pVariant = real::GetApp()->GetVar("start_vol");
@@ -93,8 +85,8 @@ class StartMusicSliderBackport : public patch::BasePatch
         // Hook.
         game.hookFunctionPatternDirect(pattern::AudioManagerFMODPlay, AudioManagerFMODPlay,
                                        &real::AudioManagerFMODPlay);
-        game.hookFunction(real::AudioManagerFMODSetMusicVol, AudioManagerFMODSetMusicVol,
-                          &real::AudioManagerFMODSetMusicVol);
+        game.hookFunctionPatternDirect(pattern::OnProgressChangedMusic, OnProgressChangedMusic,
+                                       &real::OnProgressChangedMusic);
     }
 
     static float getStartVol()
@@ -107,38 +99,41 @@ class StartMusicSliderBackport : public patch::BasePatch
         return fStartVol;
     }
 
+    static void __fastcall OnProgressChangedMusic(Variant* pVariant)
+    {
+        // We will re-call adjust volume since we want our start vol to be on top here.
+        real::OnProgressChangedMusic(pVariant);
+        adjustMusicVolume(real::GetAudioManager());
+    }
+
     static void StartVolumeSliderCallback(Variant* pVariant)
     {
         // We'll save the start_vol, our own detour of setmusicvol will calculate adequate volume
         // where needed.
         real::GetApp()->GetVar("start_vol")->Set(pVariant->GetFloat());
-        AudioManagerFMODSetMusicVol(real::GetAudioManager(), 0.0f);
+        adjustMusicVolume(real::GetAudioManager());
     }
 
-    static void __fastcall AudioManagerFMODSetMusicVol(void* this_, float volume)
+    static void __fastcall adjustMusicVolume(AudioManagerFMOD* this_)
     {
-        // If you exited to OnlineScreen, it was still as loud as ever. You could also change
-        // "music_vol" slider and it'd affect theme.ogg. This fixes that.
-        // nit: Create a struct for AudioManager/AudioManagerFMOD
-        std::string* lastTrackName =
-            reinterpret_cast<std::string*>(reinterpret_cast<uint8_t*>(this_) + 8);
-        if (lastTrackName->find("/theme.ogg") != std::string::npos)
+        float volume = real::GetApp()->GetVar("music_vol")->GetFloat();
+        if (this_->m_lastPlayedTrack.find("/theme.ogg") != std::string::npos)
         {
-            real::AudioManagerFMODSetMusicVol(this_, volume * getStartVol());
+            volume *= getStartVol();
+            real::GetAudioManager()->SetMusicVol(volume);
             return;
         }
-        real::AudioManagerFMODSetMusicVol(this_, volume);
+        real::GetAudioManager()->SetMusicVol(volume);
     }
 
-    static void* __fastcall AudioManagerFMODPlay(void* this_, std::string fName, bool bLooping,
-                                                 bool bIsMusic, bool bAddBasePath,
+    static void* __fastcall AudioManagerFMODPlay(AudioManagerFMOD* this_, std::string fName,
+                                                 bool bLooping, bool bIsMusic, bool bAddBasePath,
                                                  bool bForceStreaming)
     {
         void* ret = real::AudioManagerFMODPlay(this_, fName, bLooping, bIsMusic, bAddBasePath,
                                                bForceStreaming);
-        // Our detour will calculate appropriate volume level depending on audio file played.
         if (bIsMusic)
-            AudioManagerFMODSetMusicVol(this_, real::GetApp()->GetVar("music_vol")->GetFloat());
+            adjustMusicVolume(real::GetAudioManager());
         return ret;
     }
 };
