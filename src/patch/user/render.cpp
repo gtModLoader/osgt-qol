@@ -419,6 +419,10 @@ class CustomizedTitleScreen : public patch::BasePatch
         {
             // Initialize the weather with bInWorld as false.
             pNewBG->Init(false);
+            // Do an update as well before anything renders it. This is needed in rare cases such as
+            // Background_Treasure where one specific variable doesn't have an initial value, so it
+            // gets trashed and causes a game crash.
+            pNewBG->Update();
             // Save our old one to delete in a brief second.
             Background* pOriginalWeather = (Background*)pMapBGComponent->m_pBackground;
             // Assign our new one in place.
