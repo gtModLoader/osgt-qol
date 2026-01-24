@@ -69,6 +69,19 @@ class Entity : public boost::signals::trackable
                 return ent;
         return nullptr;
     }
+    Entity* GetEntityByNameRecursively(std::string key)
+    {
+        if (key == m_name) return this;
+        for (const auto& ent : m_children) {
+            if (ent->m_name == key)
+                return ent;
+            else {
+                Entity* pRes = ent->GetEntityByNameRecursively(key);
+                if (pRes) return pRes;
+            }
+        }
+        return nullptr;
+    }
     void GetEntitiesByName(std::vector<Entity*>* pEnts, std::string name)
     {
         if (m_bTaggedForDeletion)

@@ -135,6 +135,13 @@ REGISTER_GAME_FUNCTION(ScrollScroll,
                        "C7 44 24 38 00 00 00 00 C6 44 24 28 00 41 B8 06 00 00 00 48 8D ? ? ? ? ? "
                        "48 8D 4C 24 28 E8 ? ? ? ? 90 4C 8B C3 48 8D 54 24 28 48 8B CF E8",
                        __fastcall, Entity*, void* pMem, ScrollSettings*);
+REGISTER_GAME_FUNCTION(OnMenuButtonPressed,
+                       "40 53 41 56 41 57 48 83 EC 50 48 8B ? ? ? ? ? 48 33 C4 48 89 44 24 40",
+                       __fastcall, void, VariantList*);
+REGISTER_GAME_FUNCTION(OnGemButtonPressed,
+                       "40 53 48 83 EC 50 48 C7 44 24 20 FE FF FF FF 48 8B ? ? ? ? ? 48 33 C4 48 "
+                       "89 44 24 48 48 8D ? ? ? ? ? E8 ? ? ? ? E8",
+                       __fastcall, void, VariantList*);
 namespace game
 {
 
@@ -183,6 +190,10 @@ void game::OptionsManager::initialize()
     // Hook
     game.hookFunctionPatternDirect<OptionsMenuAddContent_t>(
         pattern::OptionsMenuAddContent, OptionsMenuAddContent, &real::OptionsMenuAddContent);
+    game.hookFunctionPatternDirect<OnMenuButtonPressed_t>(
+        pattern::OnMenuButtonPressed, OnMenuButtonPressed, &real::OnMenuButtonPressed);
+    game.hookFunctionPatternDirect<OnGemButtonPressed_t>(
+        pattern::OnGemButtonPressed, OnGemButtonPressed, &real::OnGemButtonPressed);
 }
 
 void OptionsManager::renderSlider(OptionsManager::GameOption& optionDef, void* pEntityPtr,
@@ -584,6 +595,25 @@ void OptionsManager::OptionsMenuAddContent(void* pEnt, void* unk2, void* unk3, v
     VariantList vl(pScrollChild->GetParent()->GetParent());
     real::ResizeScrollBounds(&vl);
     return;
+}
+
+void OptionsManager::OnMenuButtonPressed(VariantList* pVL)
+{
+    // Do we care if anyone else needs OnMenuButtonPressed...? I guess they can create a signal for
+    // it if they need it.
+    if (real::GetApp()->m_entityRoot->GetEntityByNameRecursively("OptionsMenu") ||
+        real::GetApp()->m_entityRoot->GetEntityByNameRecursively("OptionsPage"))
+        return;
+    real::OnMenuButtonPressed(pVL);
+}
+
+void OptionsManager::OnGemButtonPressed(VariantList* pVL)
+{
+    // Same comment as for MenuButtonPressed.
+    if (real::GetApp()->m_entityRoot->GetEntityByNameRecursively("OptionsMenu") ||
+        real::GetApp()->m_entityRoot->GetEntityByNameRecursively("OptionsPage"))
+        return;
+    real::OnGemButtonPressed(pVL);
 }
 
 }; // namespace game

@@ -317,6 +317,8 @@ class OptionsManager
     // Fastcalls used in hooks
     static void __fastcall OptionsMenuAddContent(void* pEnt, void* unk2, void* unk3, void* unk4);
     static void __fastcall OptionsMenuOnSelect(void* pVList);
+    static void __fastcall OnMenuButtonPressed(VariantList*);
+    static void __fastcall OnGemButtonPressed(VariantList*);
 };
 
 // Responsible for providing a standard way to register custom weathers
