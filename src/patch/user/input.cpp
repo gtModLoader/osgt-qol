@@ -176,3 +176,56 @@ class FixURLButtons : public patch::BasePatch
     }
 };
 REGISTER_USER_GAME_PATCH(FixURLButtons, fix_url_buttons);
+
+class ToggleCtrlJump : public patch::BasePatch
+{
+  public:
+    void apply() const override
+    {
+        auto& game = game::GameHarness::get();
+
+        // Nop out the original key binding, we'll make our own.
+        auto ctrlBindAddr = game.findMemoryPattern<uint8_t*>(
+            "E8 ? ? ? ? 48 C7 45 07 0F 00 00 00 48 89 5D FF C6 45 EF 00 41 B8 07 00 00 00 48 8D ? "
+            "? ? ? ? 48 8D 4D EF E8 ? ? ? ? 89 5C 24 28");
+        utils::nopMemory(ctrlBindAddr, 5);
+
+        // Default this to off, some may prefer Ctrl for accessiblity reasons.
+        Variant* pVariant = real::GetApp()->GetVar("osgt_qol_toggle_ctrl_jump");
+        if (pVariant->GetType() != Variant::TYPE_UINT32)
+            pVariant->Set(0U);
+
+        auto& optionsMgr = game::OptionsManager::get();
+        optionsMgr.addCheckboxOption("qol", "Input", "osgt_qol_toggle_ctrl_jump",
+                                     "Disable CTRL key to Jump", &HideUIScrollHandlesCallback);
+
+        auto& inputEvents = game::InputEvents::get();
+        inputEvents.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
+    }
+
+    static void HideUIScrollHandlesCallback(VariantList* pVariant)
+    {
+        Entity* pCheckbox = pVariant->Get(1).GetEntity();
+        bool bChecked = pCheckbox->GetVar("checked")->GetUINT32() != 0;
+        real::GetApp()->GetVar("osgt_qol_toggle_ctrl_jump")->Set(uint32_t(bChecked));
+        AddCustomKeybinds();
+    }
+
+    static void AddCustomKeybinds()
+    {
+        // Toggle CTRL to Jump depending on var state.
+        if (real::GetApp()->GetVar("osgt_qol_toggle_ctrl_jump")->GetUINT32() == 0)
+            real::AddKeyBinding(real::GetArcadeComponent(), "tcj_Jump", 500013, 500056, 0, 0);
+        else
+        {
+            // Remove the binding if it exists.
+            VariantList keyToRemove;
+            keyToRemove.m_variant[0].Set("tcj_Jump");
+            real::GetArcadeComponent()
+                ->GetShared()
+                ->GetFunction("RemoveKeyBindingsStartingWith")
+                ->sig_function(&keyToRemove);
+        }
+    }
+};
+REGISTER_USER_GAME_PATCH(ToggleCtrlJump, toggle_ctrl_jump);

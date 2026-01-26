@@ -76,3 +76,6 @@ Allows you to switch country flags with game launched without system modificatio
 
 Fixes the broken GDPR logic on URL buttons
 +fix_url_buttons
+
+Adds a toggle for ctrl to jump
++toggle_ctrl_jump
