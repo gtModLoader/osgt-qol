@@ -24,6 +24,10 @@ REGISTER_GAME_FUNCTION(
     "C6 44 24 28 00 41 B8 09 00 00 00 48 8D",
     __fastcall, void, Variant*);
 
+REGISTER_GAME_FUNCTION(AudioManagerFMODSetMusicVol,
+                       "40 53 48 83 EC 30 48 8B D9 0F 29 74 24 20 48 8B 89 A8 00 00 00", __thiscall,
+                       void, AudioManagerFMOD*, float);
+
 class AudioStutterPatch : public patch::BasePatch
 {
   public:
@@ -149,6 +153,11 @@ class AudioMuteFix : public patch::BasePatch
 
         if (real::GetApp()->GetVar("music_vol")->GetFloat() <= 0.00f)
             real::GetAudioManager()->SetMusicEnabled(false);
+
+        auto& game = game::GameHarness::get();
+        game.hookFunctionPatternDirect(pattern::AudioManagerFMODSetMusicVol,
+                                       AudioManagerFMODSetMusicVol,
+                                       &real::AudioManagerFMODSetMusicVol);
     }
 
     static void onMusicVolChanged(Variant* pVariant)
@@ -174,6 +183,15 @@ class AudioMuteFix : public patch::BasePatch
             real::GetAudioManager()->SetMusicVol(0.00f);
             real::GetAudioManager()->SetMusicEnabled(false);
         }
+    }
+
+    static void __thiscall AudioManagerFMODSetMusicVol(AudioManagerFMOD* this_, float vol)
+    {
+        // Don't allow vol to go to 0.00f when we're supposed to play audio, it makes everything
+        // super loud.
+        if (vol < 0.01f && this_->m_bMusicEnabled)
+            vol = 0.01f;
+        real::AudioManagerFMODSetMusicVol(this_, vol);
     }
 };
 REGISTER_USER_GAME_PATCH(AudioMuteFix, audio_mute_fix);
