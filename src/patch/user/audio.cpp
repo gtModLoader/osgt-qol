@@ -28,6 +28,10 @@ REGISTER_GAME_FUNCTION(AudioManagerFMODSetMusicVol,
                        "40 53 48 83 EC 30 48 8B D9 0F 29 74 24 20 48 8B 89 A8 00 00 00", __thiscall,
                        void, AudioManagerFMOD*, float);
 
+REGISTER_GAME_FUNCTION(AudioManagerFMODStopMusic,
+                       "48 89 5C 24 10 57 48 83 EC 40 48 8B 19 48 8B F9 FF 93 E0 00 00 00",
+                       __thiscall, void, AudioManagerFMOD*);
+
 class AudioStutterPatch : public patch::BasePatch
 {
   public:
@@ -158,6 +162,8 @@ class AudioMuteFix : public patch::BasePatch
         game.hookFunctionPatternDirect(pattern::AudioManagerFMODSetMusicVol,
                                        AudioManagerFMODSetMusicVol,
                                        &real::AudioManagerFMODSetMusicVol);
+        game.hookFunctionPatternDirect(pattern::AudioManagerFMODStopMusic,
+                                       AudioManagerFMODStopMusic, &real::AudioManagerFMODStopMusic);
     }
 
     static void onMusicVolChanged(Variant* pVariant)
@@ -167,14 +173,12 @@ class AudioMuteFix : public patch::BasePatch
             // Re-enable. Set music state enabled, set volume BEFORE playing and then play. This
             // will then chain with StartMusicSliderBackport when enabled as well since
             // AudioManagerFMODPlay is hooked by it.
+            real::GetAudioManager()->m_bMusicEnabled = true;
+            real::GetAudioManager()->SetMusicVol(pVariant->GetFloat());
             if (real::GetAudioManager()->m_lastPlayedTrack != "")
-            {
-                real::GetAudioManager()->m_bMusicEnabled = true;
-                real::GetAudioManager()->SetMusicVol(pVariant->GetFloat());
                 real::GetAudioManager()->Play(real::GetAudioManager()->m_lastPlayedTrack,
                                               real::GetAudioManager()->m_bLastMusicLooping, true,
                                               false, true);
-            }
         }
         else if (real::GetAudioManager()->m_bMusicEnabled && pVariant->GetFloat() <= 0.00f)
         {
@@ -192,6 +196,13 @@ class AudioMuteFix : public patch::BasePatch
         if (vol < 0.01f && this_->m_bMusicEnabled)
             vol = 0.01f;
         real::AudioManagerFMODSetMusicVol(this_, vol);
+    }
+
+    static void __thiscall AudioManagerFMODStopMusic(AudioManagerFMOD* this_)
+    {
+        // Reset last played track on StopMusic - things like world select menu call this.
+        real::AudioManagerFMODStopMusic(this_);
+        this_->m_lastPlayedTrack = "";
     }
 };
 REGISTER_USER_GAME_PATCH(AudioMuteFix, audio_mute_fix);
