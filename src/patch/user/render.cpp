@@ -531,9 +531,13 @@ class HideMyUI : public patch::BasePatch
         pMenu->GetEntityByName("FRIENDS")->GetVar("alpha")->Set(alphaLevel);
         pMenu->GetEntityByName("GemTouch")->GetVar("alpha")->Set(alphaLevel);
         pMenu->GetEntityByName("BuxEnt")->GetVar("alpha")->Set(alphaLevel);
-        Variant* pAlphaVar = pMenu->GetEntityByName("EVENTS")->GetVar("alpha");
-        if (pAlphaVar->GetFloat() != 0.00f)
-            pAlphaVar->Set(alphaLevel);
+        Entity* pEventMenu = pMenu->GetEntityByName("EVENTS");
+        if (pEventMenu)
+        {
+            Variant* pAlphaVar = pEventMenu->GetVar("alpha");
+            if (pAlphaVar->GetFloat() != 0.00f)
+                pAlphaVar->Set(alphaLevel);
+        }
         // Also dim the scroll handles for inv/chat
         if (real::GetApp()->GetVar("hide_ui_scrollers")->GetUINT32() == 1)
             SetSlidersOpacity(alphaLevel);
@@ -596,6 +600,7 @@ class HideMyUI : public patch::BasePatch
                     bDisabling = false;
                 }
 
+                Entity* pEventMenu = pMenu->GetEntityByName("EVENTS");
                 if (bDisabling)
                 {
                     // TouchHandler is responsible for sinking the input for the entity, we want to
@@ -603,7 +608,8 @@ class HideMyUI : public patch::BasePatch
                     pMenu->GetEntityByName("MENU")->RemoveComponentByName("TouchHandler");
                     pMenu->GetEntityByName("CHAT")->RemoveComponentByName("TouchHandler");
                     pMenu->GetEntityByName("FRIENDS")->RemoveComponentByName("TouchHandler");
-                    pMenu->GetEntityByName("EVENTS")->RemoveComponentByName("TouchHandler");
+                    if (pEventMenu)
+                        pEventMenu->RemoveComponentByName("TouchHandler");
                     pMenu->GetEntityByName("GemTouch")->RemoveComponentByName("TouchHandler");
 
                     // If the fade-in animation is going on, suspend it.
@@ -612,7 +618,8 @@ class HideMyUI : public patch::BasePatch
                         pMenu->GetEntityByName("MENU")->RemoveComponentByName("Interpolate");
                         pMenu->GetEntityByName("CHAT")->RemoveComponentByName("Interpolate");
                         pMenu->GetEntityByName("FRIENDS")->RemoveComponentByName("Interpolate");
-                        pMenu->GetEntityByName("EVENTS")->RemoveComponentByName("Interpolate");
+                        if (pEventMenu)
+                            pEventMenu->RemoveComponentByName("Interpolate");
                         pMenu->GetEntityByName("GemTouch")->RemoveComponentByName("Interpolate");
                         pMenu->GetEntityByName("BuxEnt")->RemoveComponentByName("Interpolate");
                     }
@@ -626,8 +633,8 @@ class HideMyUI : public patch::BasePatch
                         real::TouchHandlerComponent(operator new(0x120)));
                     pMenu->GetEntityByName("FRIENDS")->AddComponent(
                         real::TouchHandlerComponent(operator new(0x120)));
-                    pMenu->GetEntityByName("EVENTS")->AddComponent(
-                        real::TouchHandlerComponent(operator new(0x120)));
+                    if (pEventMenu)
+                        pEventMenu->AddComponent(real::TouchHandlerComponent(operator new(0x120)));
                     pMenu->GetEntityByName("GemTouch")
                         ->AddComponent(real::TouchHandlerComponent(operator new(0x120)));
                 }
