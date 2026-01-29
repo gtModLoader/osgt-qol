@@ -39,6 +39,8 @@ static time_t g_lastPlaymodTimerRecycle = 0;
 static float g_playmodIconHeight = 0.0f;
 static float g_lastOverlayHeight = 150.0f;
 static bool g_bRecalculateIconHeight = true;
+static bool g_IsOverlayHidden = true;
+
 class PlaymodTimersOverlay : public patch::BasePatch
 {
   public:
@@ -101,6 +103,13 @@ class PlaymodTimersOverlay : public patch::BasePatch
         auto& itemapi = game::ItemAPI::get();
         itemapi.m_sig_loadFromMem.connect(&PlaymodTimersOverlay::refreshItemDB);
         // TODO: Clear UI on server exit.
+
+        // In-game way of toggling overlay visibility
+        g_IsOverlayHidden =
+            real::GetApp()->GetVar("osgt_qol_hide_playmod_overlay")->GetUINT32() != 0;
+        auto& optionsMgr = game::OptionsManager::get();
+        optionsMgr.addCheckboxOption("qol", "UI", "osgt_qol_hide_playmod_overlay",
+                                     "Hide playmod overlay\n", &OnOverlayHideCallback);
     }
 
     static bool DoesTimerOverlayExist()
@@ -197,7 +206,9 @@ class PlaymodTimersOverlay : public patch::BasePatch
                     it->m_killstamp = modData->Duration + time(0);
                     if (!DoesTimerOverlayExist())
                     {
-                        if (oldKillstamp <= time(0) || it->m_killstamp <= time(0) || modData->Duration <= 0) {
+                        if (oldKillstamp <= time(0) || it->m_killstamp <= time(0) ||
+                            modData->Duration <= 0)
+                        {
                             printf("[PlaymodOverlays] killing offscreen\n");
                             it = g_activeMods.erase(it);
                             bNewTarget = true;
@@ -208,7 +219,8 @@ class PlaymodTimersOverlay : public patch::BasePatch
                     if (it->m_killstamp - time(0) > 7200)
                         it->m_bDelayLoad = true;
                     UpdateOverlayTimer(modData->PlaymodID, it->m_killstamp);
-                    printf("[PlaymodOverlays] upd kstamp=%lld, oldstamp=%lld, dur=%d, pmod=%d\n", it->m_killstamp, oldKillstamp, modData->Duration, modData->PlaymodID);
+                    printf("[PlaymodOverlays] upd kstamp=%lld, oldstamp=%lld, dur=%d, pmod=%d\n",
+                           it->m_killstamp, oldKillstamp, modData->Duration, modData->PlaymodID);
                     if (it->m_killstamp <= time(0) || modData->Duration <= 0)
                     {
                         it = g_activeMods.erase(it);
@@ -294,7 +306,8 @@ class PlaymodTimersOverlay : public patch::BasePatch
     static void __fastcall OnMapLoaded(void* this_, __int64 p1, __int64 p2, __int64 p3)
     {
         real::OnMapLoaded(this_, p1, p2, p3);
-        ConstructOverlay();
+        if (!g_IsOverlayHidden)
+            ConstructOverlay();
     }
 
     static void ConstructOverlay()
@@ -402,6 +415,8 @@ class PlaymodTimersOverlay : public patch::BasePatch
 
     static void OnOverlayUpdate(Entity* pEnt, VariantList* pVL)
     {
+        if (g_IsOverlayHidden)
+            return;
         if (g_lastPlaymodTimerRecycle >= time(0))
             return;
         // Once-a-second recycle loop for overlayed timers. Kill any entities marked as killable.
@@ -473,5 +488,36 @@ class PlaymodTimersOverlay : public patch::BasePatch
         pIcon->GetVar("scale2d")->Set(CL_Vec2f(1.5f));
         return pIcon;
     }
+
+    static void OnOverlayHideCallback(VariantList* pVariant)
+    {
+        Entity* pCheckbox = pVariant->Get(1).GetEntity();
+        bool bChecked = pCheckbox->GetVar("checked")->GetUINT32() != 0;
+        real::GetApp()->GetVar("osgt_qol_hide_playmod_overlay")->Set(uint32_t(bChecked));
+        g_IsOverlayHidden = bChecked;
+
+        if (g_IsOverlayHidden)
+        {
+            // Remove immediately if hiding
+            Entity* pWorldSpecificGUI =
+                real::GetApp()->m_entityRoot->GetEntityByName("GUI")->GetEntityByName(
+                    "WorldSpecificGUI");
+
+            if (pWorldSpecificGUI)
+            {
+                Entity* pOverlay = pWorldSpecificGUI->GetEntityByName("TimerOverlay");
+                if (pOverlay)
+                {
+                    pWorldSpecificGUI->RemoveEntityByAddress(pOverlay);
+                }
+            }
+        }
+        else
+        {
+            // Re-construct if unhiding
+            ConstructOverlay();
+        }
+    }
 };
+
 REGISTER_USER_GAME_PATCH(PlaymodTimersOverlay, playmod_overlay);
