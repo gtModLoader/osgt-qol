@@ -109,3 +109,6 @@ Allows the hotbar to be resized
 
 Re-allows walking when in dialogs
 +allow_dialog_input
+
+Adjusts inventory scaling on resolutions above 1080p to scale against 1080p rather than being comically large
++high_res_inventory_scaling
