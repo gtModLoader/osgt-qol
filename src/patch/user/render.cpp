@@ -1465,17 +1465,38 @@ int AnchorCameraToPlayerPatch::m_toggleKey;
 REGISTER_USER_GAME_PATCH(AnchorCameraToPlayerPatch, anchor_camera_to_player);
 
 static bool g_usingScaledInventory = false;
+static float g_invScale = 1.00f;
+static float g_menuScale = 0.00f;
 class HighResolutionInventoryScaling : public patch::BasePatch
 {
   public:
     void apply() const override
     {
         // Fixes comically large scaling for inventories on high-res screens on desktop.
+        // TODO: Figure out to dynamically resize from options.. re-creating GameMenu or killing
+        // Inventory crashes the game.
         auto& game = game::GameHarness::get();
         game.hookFunctionPatternDirect<GetInventoryInfoScale_t>(
             pattern::GetInventoryInfoScale, GetInventoryInfoScale, &real::GetInventoryInfoScale);
         game.hookFunctionPatternDirect<AddMenuButton_t>(pattern::AddMenuButton, AddMenuButton,
                                                         &real::AddMenuButton);
+
+        Variant* pVariant = real::GetApp()->GetVar("osgt_qol_hidpi_invscale");
+        if (pVariant->GetType() != Variant::TYPE_FLOAT)
+            pVariant->Set(1.00f);
+        else
+            g_invScale = pVariant->GetFloat();
+
+        auto& optionsMgr = game::OptionsManager::get();
+        optionsMgr.addSliderOption("qol", "UI", "osgt_qol_hidpi_invscale",
+                                   "High-DPI Inventory Scaling `5(requires world re-enter)``",
+                                   &HighDPIInventoryScalingCallback);
+    }
+
+    static void HighDPIInventoryScalingCallback(Variant* pVariant)
+    {
+        g_invScale = pVariant->GetFloat();
+        real::GetApp()->GetVar("osgt_qol_hidpi_invscale")->Set(g_invScale);
     }
 
     static void __fastcall AddMenuButton(std::string buttonID, std::string buttonText,
@@ -1491,22 +1512,49 @@ class HighResolutionInventoryScaling : public patch::BasePatch
         {
             // Scale menu up a bit
             CL_Vec2f vMenuSize = pParentEnt->GetVar("size2d")->GetVector2();
+            g_menuScale = real::iPadMapY(5.0f);
+            float fMarginSize = g_menuScale * 4;
             vMenuSize.x *= GetInventoryInfoScale() / 2.0f;
-            vMenuSize.y += real::iPadMapY(5.0f) * 4;
+            vMenuSize.y += fMarginSize;
+            // If we're scaled way too down, we'll have to force the menu larger.
+            Entity* pButton = pParentEnt->GetEntityByName(buttonID);
+            CL_Vec2f vButtonSize = pButton->GetVar("size2d")->GetVector2();
+            if (vButtonSize.x > vMenuSize.x)
+                vMenuSize.x = vButtonSize.x + real::iPadMapX(2.0f);
+            if ((vButtonSize.y * 4 + (fMarginSize)) > vMenuSize.y)
+                vMenuSize.y = (vButtonSize.y * 4) + fMarginSize;
             pParentEnt->GetVar("size2d")->Set(vMenuSize);
+        }
+        else if (nthButton == 1)
+        {
+            // Recalculate padding just in case.
+            Entity* pFormerButtonEnt = pParentEnt->GetEntityByName("TRASH");
+            if (pFormerButtonEnt)
+            {
+                CL_Vec2f vFormerButtonPos = pFormerButtonEnt->GetVar("pos2d")->GetVector2();
+                CL_Vec2f vFormerButtonSize = pFormerButtonEnt->GetVar("size2d")->GetVector2();
+
+                Entity* pButton = pParentEnt->GetEntityByName(buttonID);
+                CL_Vec2f vButtonPos = pButton->GetVar("pos2d")->GetVector2();
+
+                if ((vFormerButtonPos.y + vFormerButtonSize.y) > vButtonPos.y)
+                {
+                    g_menuScale += ((vFormerButtonPos.y + vFormerButtonSize.y) - vButtonPos.y);
+                }
+            }
         }
 
         // Realign entities.
         Entity* pTextEnt = pParentEnt->GetEntityByName("TEXT_" + buttonID);
         CL_Vec2f vTextPos = pTextEnt->GetVar("pos2d")->GetVector2();
-        vTextPos.y += real::iPadMapY(5.0f) * nthButton;
-        vTextPos.x *= GetInventoryInfoScale() / 2.0f;
+        vTextPos.y += g_menuScale * nthButton;
+        vTextPos.x = (pParentEnt->GetVar("size2d")->GetVector2().x / 2);
         pTextEnt->GetVar("pos2d")->Set(vTextPos);
 
         Entity* pButton = pParentEnt->GetEntityByName(buttonID);
         CL_Vec2f vButtonPos = pButton->GetVar("pos2d")->GetVector2();
         CL_Vec2f vButtonSize = pButton->GetVar("size2d")->GetVector2();
-        vButtonPos.y += real::iPadMapY(5.0f) * nthButton;
+        vButtonPos.y += g_menuScale * nthButton;
         vButtonPos.x = (pParentEnt->GetVar("size2d")->GetVector2().x / 2) - (vButtonSize.x / 2);
         pButton->GetVar("pos2d")->Set(vButtonPos);
 
@@ -1525,7 +1573,7 @@ class HighResolutionInventoryScaling : public patch::BasePatch
 
         g_usingScaledInventory = true;
         // Scale against 1080p
-        return 2.0f + ((float)screenRect.right / (float)1920);
+        return 2.0f + ((float)screenRect.right / (float)1920) * g_invScale;
     }
 };
 REGISTER_USER_GAME_PATCH(HighResolutionInventoryScaling, high_res_inventory_scaling);
