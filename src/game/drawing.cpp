@@ -107,7 +107,7 @@ REGISTER_GAME_FUNCTION(EntitySetScaleBySize,
 REGISTER_GAME_FUNCTION(
     AddBMPRectAroundEntity,
     "48 8B C4 55 56 57 41 56 41 57 48 8D 68 98 48 81 EC 40 01 00 00 48 C7 44 24 68 FE FF FF FF",
-    __fastcall, void, Entity* pEnt, uint32_t col1, uint32_t col2, float padding, bool bUnk,
+    __fastcall, Entity*, Entity* pEnt, uint32_t col1, uint32_t col2, float padding, bool bAddBorder,
     float fontScale, uint32_t fontID, bool bUnk4);
 
 // FadeInEntity
@@ -135,6 +135,9 @@ REGISTER_GAME_FUNCTION(
     GetDevicePixelsPerInchDiagonal,
     "40 53 48 83 EC 20 8B ? ? ? ? ? 85 C9 0F 85 ? ? ? ? F3 0F 10 ? ? ? ? ? 0F 57 C9", __fastcall,
     int);
+REGISTER_GAME_FUNCTION(EnforceMinimumFontLineToScreenRatio,
+                       "48 89 5C 24 08 57 48 83 EC 50 0F 29 74 24 40 0F 29 7C 24 30 0F 28 F9",
+                       __fastcall, float, int, float, float);
 
 namespace game
 {
@@ -175,6 +178,9 @@ void GameHarness::resolveSharedSigs()
         findMemoryPattern<uint8_t*>(pattern::GetAudioManager) + 31);
     real::GetDevicePixelsPerInchDiagonal = findMemoryPattern<GetDevicePixelsPerInchDiagonal_t>(
         pattern::GetDevicePixelsPerInchDiagonal);
+    real::EnforceMinimumFontLineToScreenRatio =
+        findMemoryPattern<EnforceMinimumFontLineToScreenRatio_t>(
+            pattern::EnforceMinimumFontLineToScreenRatio);
 }
 
 // /!\ Out of Order!
