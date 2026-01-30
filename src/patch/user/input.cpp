@@ -60,7 +60,7 @@ class QuickbarHotkeys : public patch::BasePatch
     {
         // Our custom mappings right now are just on keycode >= 600000
         // See AddCustomKeybinds function.
-        if (keyCode >= 600000 && keyCode <= 600003)
+        if (keyCode >= 600000 && keyCode <= 600007)
         {
             if (real::GetApp()->GetGameLogic()->IsDialogOpened())
                 return;
@@ -80,11 +80,13 @@ class QuickbarHotkeys : public patch::BasePatch
                     // When GameMenu is constructed, so is the inventory.
                     // We fake a "touch" event on a quickbar Tool to do the item switch cleanly.
                     int ToolIndex = keyCode - 600000;
-                    EntityComponent* pToolSelect =
-                        pGameMenu->GetEntityByName("ItemsParent")
+                    Entity* pTool = pGameMenu->GetEntityByName("ItemsParent")
                             ->GetEntityByName("ToolSelectMenu")
-                            ->GetEntityByName("Tool" + std::to_string(ToolIndex))
-                            ->GetComponentByName("ToolSelect");
+                            ->GetEntityByName("Tool" + std::to_string(ToolIndex));
+                    if (!pTool)
+                        return;
+                    EntityComponent* pToolSelect =
+                        pTool->GetComponentByName("ToolSelect");
                     real::ToolSelectComponentOnTouchStart(pToolSelect);
                 }
             }
@@ -94,15 +96,14 @@ class QuickbarHotkeys : public patch::BasePatch
 
     static void AddCustomKeybinds()
     {
+        // Map the numpad key 0 resetting to Fist/Wrench.
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect0", 96, 600000, 0, 0);
+
         // Map our custom keybinds for switching between quickbar slots.
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect1", 49, 600001, 0, 0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect2", 50, 600002, 0, 0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect3", 51, 600003, 0, 0);
-        // Also the numpad keys with 0 resetting to Fist/Wrench.
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect1", 96, 600000, 0, 0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect1", 97, 600001, 0, 0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect2", 98, 600002, 0, 0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect3", 99, 600003, 0, 0);
+        for (int i = 1; i < 8; i++) {
+            real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect" + std::to_string(i), 48 + i, 600000 + i, 0, 0);
+            real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect" + std::to_string(i), 96 + i, 600000 + i, 0, 0);
+        }
     }
 };
 REGISTER_USER_GAME_PATCH(QuickbarHotkeys, quickbar_hotkey_patch);

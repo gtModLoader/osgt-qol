@@ -141,6 +141,19 @@ REGISTER_GAME_FUNCTION(OnPressingBackDuringGameplay,
                        "FF FF FF 48 89 58 08 48 89 70 10 48 89 78 18",
                        __fastcall, void);
 
+REGISTER_GAME_FUNCTION(AddTool,
+                       "48 8B C4 56 57 41 56 48 81 EC 90 00 00 00 48 C7 40 90 FE FF FF FF 48 89 58 "
+                       "18 48 89 68 20 48 8B",
+                       __fastcall, void, int, Entity*);
+REGISTER_GAME_FUNCTION(InventoryMenuCreate,
+                       "48 8B C4 55 57 41 55 41 56 41 57 48 8D A8 C8 FE FF FF 48 81 EC 10 02 00 00 "
+                       "48 C7 45 A0 FE FF FF FF",
+                       __fastcall, void, Entity*);
+REGISTER_GAME_FUNCTION(UpdateTouchControlPositions,
+                       "48 8B C4 55 41 54 41 55 41 56 41 57 48 8D 6C 24 90 48 81 EC 70 01 00 00 48 "
+                       "C7 44 24 50 FE FF FF FF",
+                       _fastcall, void);
+
 static std::vector<std::string> displayNames;
 static uint32_t vanillaWeatherBound = 16;
 class CustomizedTitleScreen : public patch::BasePatch
@@ -992,3 +1005,128 @@ class LiveGUIRebuilder : public patch::BasePatch
     }
 };
 REGISTER_USER_GAME_PATCH(LiveGUIRebuilder, live_gui_rebuilder);
+
+class HotbarExpanded : public patch::BasePatch
+{
+  public:
+    void apply() const override
+    {
+        // This patch attempts to find every place where hotbar items are limited and expands on
+        // them to allow us create an expanded quicktools hotbar.
+        // Currently we are up to 4 extra quicktools (total of 7 useable items after fist), but it's
+        // not in a fully playable state yet.
+        // This patch also takes control of Touch Controls positioning since with an expanded
+        // hotbar, they'd overlap with the hotbar.
+        // TODO: Find remaining places where the hard limit of "< 4" is used
+        // TODO: Add hot patching support so quicktools could be added and removed on the go
+        // (3 would return UpdateTouchControlPositions to normal)
+
+        auto& game = game::GameHarness::get();
+        game.hookFunctionPatternDirect<InventoryMenuCreate_t>(
+            pattern::InventoryMenuCreate, InventoryMenuCreate, &real::InventoryMenuCreate);
+        real::AddTool = game.findMemoryPattern<AddTool_t>(pattern::AddTool);
+
+        // PlayerItems::Serialize
+        auto playerItemsSerializeAddr =
+            game.findMemoryPattern<uint8_t*>("41 B9 04 00 00 00 F3 0F 11 ? ? ? ? ? 41 0F B7 10");
+        utils::writeMemoryPattern(playerItemsSerializeAddr, "41 B9 08");
+
+        // PlayerItems::UpdateQuickTools
+        auto playerItemUpdateQuickToolsAddr =
+            game.findMemoryPattern<uint8_t*>("83 F9 04 7C E8 0F B7 47 34 66 89 47 32");
+        utils::writeMemoryPattern(playerItemUpdateQuickToolsAddr, "83 F9 08");
+
+        // PlayerItems::RemoveAnyIllegalQuickTools
+        auto playerItemRemoveIllegalTools =
+            game.findMemoryPattern<uint8_t*>("41 B9 04 00 00 00 45 33 DB F3 0F 11 ? ? ? ? ? 0F 1F "
+                                             "84 00 00 00 00 00 41 0F B7 10 66 85 D2");
+        utils::writeMemoryPattern(playerItemRemoveIllegalTools, "41 B9 08");
+
+        game.hookFunctionPatternDirect<UpdateTouchControlPositions_t>(
+            pattern::UpdateTouchControlPositions, UpdateTouchControlPositions,
+            &real::UpdateTouchControlPositions);
+    }
+
+    static void fixTouchButtonAlignment(Entity* pEnt, float yPos)
+    {
+        CL_Vec2f vNewPos = {pEnt->GetVar("pos2d")->GetVector2().x, yPos};
+        pEnt->GetVar("pos2d")->Set(vNewPos);
+    }
+
+    static void __fastcall UpdateTouchControlPositions()
+    {
+        // Realign touch controls to be higher up since the quickbar is just gonna overlap them when
+        // expanded.
+        Entity* pGameMenu = real::GetApp()->m_entityRoot->GetEntityByNameRecursively("GameMenu");
+        if (!pGameMenu)
+            return;
+        Entity* pTouchEnt = pGameMenu->GetEntityByName("TouchControlsBG");
+        if (pTouchEnt)
+        {
+            Entity* pTouchLeft = pTouchEnt->GetEntityByName("TouchLeft");
+            Entity* pTouchRight = pTouchEnt->GetEntityByName("TouchRight");
+            Entity* pJumpWideButton = pTouchEnt->GetEntityByName("JumpWideButton");
+            Entity* pJumpButton = pTouchEnt->GetEntityByName("JumpButton");
+            Entity* pPunchButton = pTouchEnt->GetEntityByName("PunchButton");
+            Entity* pItemsParent = pGameMenu->GetEntityByName("ItemsParent");
+
+            CL_Vec2f vItemsParentPos = pItemsParent->GetVar("pos2d")->GetVector2();
+            CL_Vec2f vJumpButtonSize = pJumpButton->GetVar("size2d")->GetVector2();
+            CL_Vec2f vArrowButtonSize = pTouchRight->GetVar("size2d")->GetVector2();
+
+            float fMarginY = real::iPadMapY(5.0f);
+            float fNewY = vItemsParentPos.y - vJumpButtonSize.y - fMarginY;
+            Rectf screenRect;
+            real::GetScreenRect(screenRect);
+            if (fNewY > screenRect.bottom)
+                fNewY = screenRect.bottom;
+
+            fixTouchButtonAlignment(pJumpButton, fNewY);
+            fixTouchButtonAlignment(pPunchButton, fNewY);
+
+            // Position the arrows to be more centered with jump/punch ones.
+            fNewY = vItemsParentPos.y - vArrowButtonSize.y -
+                    ((vJumpButtonSize.y - vArrowButtonSize.y) / 2) - fMarginY;
+            if (fNewY > screenRect.bottom)
+                fNewY = screenRect.bottom;
+
+            fixTouchButtonAlignment(pTouchLeft, fNewY);
+            fixTouchButtonAlignment(pTouchRight, fNewY);
+            fixTouchButtonAlignment(pJumpWideButton, fNewY);
+        }
+    }
+
+    static void __fastcall InventoryMenuCreate(Entity* pEnt)
+    {
+        real::InventoryMenuCreate(pEnt);
+
+        // Max is currently 4 without game crashing - needs investigation still.
+        int iToolsToAdd = 4;
+
+        // Calculate added widths and reposition the tools
+        Entity* pToolMenu = pEnt->GetEntityByNameRecursively("ToolSelectMenu");
+        Entity* pTool0 = pToolMenu->GetEntityByName("Tool0");
+        Entity* pTool1 = pToolMenu->GetEntityByName("Tool1");
+
+        CL_Vec2f vToolSize = pTool0->GetVar("size2d")->GetVector2();
+        float fWidthMargin =
+            (pTool1->GetVar("pos2d")->GetVector2() - pTool0->GetVar("pos2d")->GetVector2()).x -
+            vToolSize.x;
+        float fAddedWidth = (fWidthMargin * iToolsToAdd) + (vToolSize.x * iToolsToAdd);
+
+        Variant* pVar = pToolMenu->GetVar("pos2d");
+        CL_Vec2f pos2d = pVar->GetVector2();
+        pos2d.x -= ceilf(fAddedWidth / 2);
+        pVar->Set(pos2d);
+        pVar = pToolMenu->GetVar("size2d");
+        CL_Vec2f size2d = pVar->GetVector2();
+        size2d.x += fAddedWidth;
+        pVar->Set(size2d);
+
+        // Create our tools
+        iToolsToAdd += 3;
+        for (int i = 4; i <= iToolsToAdd; i++)
+            real::AddTool(i, pToolMenu);
+    }
+};
+REGISTER_USER_GAME_PATCH(HotbarExpanded, hotbar_expanded);
