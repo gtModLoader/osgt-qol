@@ -115,3 +115,6 @@ See README for more info on how to use Buildomatica and what it offers
 
 Fixes annoying design decision where if any state change happened on your player (e.g. got Stinky mod) would nullify your currently available double jump.
 +double_jump_state_fixer
+
+Adjusts inventory scaling on resolutions above 1080p to scale against 1080p rather than being comically large
++high_res_inventory_scaling
