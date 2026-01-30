@@ -197,6 +197,8 @@ REGISTER_GAME_FUNCTION(
     GetInventoryInfoScale,
     "48 83 EC 48 0F 29 74 24 30 F3 0F 10 ? ? ? ? ? 0F 29 7C 24 20 E8 ? ? ? ? F3 0F 10", __fastcall,
     float);
+REGISTER_GAME_FUNCTION(AddMenuButton, "48 8B C4 55 53 56 57 41 54 41 56 41 57 48 8D 6C 24 90",
+                       __fastcall, void, std::string, std::string, uint32_t, Entity*);
 
 static std::vector<std::string> displayNames;
 static uint32_t vanillaWeatherBound = 16;
@@ -1462,17 +1464,54 @@ bool AnchorCameraToPlayerPatch::m_hotkeyEnabled = false;
 int AnchorCameraToPlayerPatch::m_toggleKey;
 REGISTER_USER_GAME_PATCH(AnchorCameraToPlayerPatch, anchor_camera_to_player);
 
+static bool g_usingScaledInventory = false;
 class HighResolutionInventoryScaling : public patch::BasePatch
 {
   public:
     void apply() const override
     {
         // Fixes comically large scaling for inventories on high-res screens on desktop.
-        // TODO: Patch MenuButtonCreate to also scale with the new infoscale. Currently it looks
-        // kinda broken on at least 2K and 4K.
         auto& game = game::GameHarness::get();
         game.hookFunctionPatternDirect<GetInventoryInfoScale_t>(
             pattern::GetInventoryInfoScale, GetInventoryInfoScale, &real::GetInventoryInfoScale);
+        game.hookFunctionPatternDirect<AddMenuButton_t>(pattern::AddMenuButton, AddMenuButton,
+                                                        &real::AddMenuButton);
+    }
+
+    static void __fastcall AddMenuButton(std::string buttonID, std::string buttonText,
+                                         uint32_t nthButton, Entity* pParentEnt)
+    {
+        real::AddMenuButton(buttonID, buttonText, nthButton, pParentEnt);
+
+        // We only care about our own scaling.
+        if (!g_usingScaledInventory)
+            return;
+
+        if (nthButton == 0)
+        {
+            // Scale menu up a bit
+            CL_Vec2f vMenuSize = pParentEnt->GetVar("size2d")->GetVector2();
+            vMenuSize.x *= GetInventoryInfoScale() / 2.0f;
+            vMenuSize.y += real::iPadMapY(5.0f) * 4;
+            pParentEnt->GetVar("size2d")->Set(vMenuSize);
+        }
+
+        // Realign entities.
+        Entity* pTextEnt = pParentEnt->GetEntityByName("TEXT_" + buttonID);
+        CL_Vec2f vTextPos = pTextEnt->GetVar("pos2d")->GetVector2();
+        vTextPos.y += real::iPadMapY(5.0f) * nthButton;
+        vTextPos.x *= GetInventoryInfoScale() / 2.0f;
+        pTextEnt->GetVar("pos2d")->Set(vTextPos);
+
+        Entity* pButton = pParentEnt->GetEntityByName(buttonID);
+        CL_Vec2f vButtonPos = pButton->GetVar("pos2d")->GetVector2();
+        vButtonPos.y += real::iPadMapY(5.0f) * nthButton;
+        vButtonPos.x = (vTextPos.x / 2) - real::iPadMapX(6.0f);
+        pButton->GetVar("pos2d")->Set(vButtonPos);
+
+        // Recreate touch registration since we just messed with positions.
+        pButton->RemoveComponentByName("TouchHandler");
+        pButton->AddComponent(real::TouchHandlerComponent(operator new(0x120)));
     }
 
     static float __fastcall GetInventoryInfoScale()
@@ -1483,6 +1522,7 @@ class HighResolutionInventoryScaling : public patch::BasePatch
         if (screenRect.right < 1920)
             return real::GetInventoryInfoScale();
 
+        g_usingScaledInventory = true;
         // Scale against 1080p
         return 2.0f + ((float)screenRect.right / (float)1920);
     }
