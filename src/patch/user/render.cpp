@@ -154,6 +154,11 @@ REGISTER_GAME_FUNCTION(
     "48 8B C4 55 41 54 41 55 41 56 41 57 48 8D 68 88 48 81 EC 50 01 00 00 48 C7 45 A8 FE FF FF FF",
     __fastcall, void, WorldRenderer*, CL_Vec2f*);
 
+REGISTER_GAME_FUNCTION(
+    GetInventoryInfoScale,
+    "48 83 EC 48 0F 29 74 24 30 F3 0F 10 ? ? ? ? ? 0F 29 7C 24 20 E8 ? ? ? ? F3 0F 10", __fastcall,
+    float);
+
 static std::vector<std::string> displayNames;
 static uint32_t vanillaWeatherBound = 16;
 class CustomizedTitleScreen : public patch::BasePatch
@@ -1409,3 +1414,30 @@ class AnchorCameraToPlayerPatch : public patch::BasePatch
 bool AnchorCameraToPlayerPatch::m_centerCameraOnPlayer = false;
 bool AnchorCameraToPlayerPatch::m_hotkeyEnabled = false;
 REGISTER_USER_GAME_PATCH(AnchorCameraToPlayerPatch, anchor_camera_to_player);
+
+class HighResolutionInventoryScaling : public patch::BasePatch
+{
+  public:
+    void apply() const override
+    {
+        // Fixes comically large scaling for inventories on high-res screens on desktop.
+        // TODO: Patch MenuButtonCreate to also scale with the new infoscale. Currently it looks
+        // kinda broken on at least 2K and 4K.
+        auto& game = game::GameHarness::get();
+        game.hookFunctionPatternDirect<GetInventoryInfoScale_t>(
+            pattern::GetInventoryInfoScale, GetInventoryInfoScale, &real::GetInventoryInfoScale);
+    }
+
+    static float __fastcall GetInventoryInfoScale()
+    {
+        Rectf screenRect;
+        real::GetScreenRect(screenRect);
+        // For under 1080p, lets just keep using original calculation.
+        if (screenRect.right < 1920)
+            return real::GetInventoryInfoScale();
+
+        // Scale against 1080p
+        return 2.0f + ((float)screenRect.right / (float)1920);
+    }
+};
+REGISTER_USER_GAME_PATCH(HighResolutionInventoryScaling, high_res_inventory_scaling);

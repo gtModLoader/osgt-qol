@@ -100,3 +100,6 @@ Provides ability to toggle Q to drop current item
 
 Adds an option to center camera to player at cost of some aesthetics (able to see out of bounds)
 +anchor_camera_to_player
+
+Adjusts inventory scaling on resolutions above 1080p to scale against 1080p rather than being comically large
++high_res_inventory_scaling
