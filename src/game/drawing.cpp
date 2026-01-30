@@ -96,10 +96,11 @@ REGISTER_GAME_FUNCTION(EntitySetScaleBySize, "48 8B C4 55 56 57 41 56 41 57 48 8
                        __fastcall, void, Entity*, CL_Vec2f&, bool, bool);
 
 // AddBMPRectAroundEntity
-REGISTER_GAME_FUNCTION(AddBMPRectAroundEntity,
-                       "48 8B C4 55 56 57 41 56 41 57 48 8D 68 98 48 81 EC 40 01 00 00 48 C7 44 24 68 FE FF FF FF",
-                       __fastcall, void, Entity* pEnt, uint32_t col1, uint32_t col2, float padding, bool bUnk,
-                       float fontScale, uint32_t fontID, bool bUnk4);
+REGISTER_GAME_FUNCTION(
+    AddBMPRectAroundEntity,
+    "48 8B C4 55 56 57 41 56 41 57 48 8D 68 98 48 81 EC 40 01 00 00 48 C7 44 24 68 FE FF FF FF",
+    __fastcall, void, Entity* pEnt, uint32_t col1, uint32_t col2, float padding, bool bAddBorder,
+    float fontScale, uint32_t fontID, bool bUnk4);
 
 // FadeInEntity
 REGISTER_GAME_FUNCTION(FadeInEntity, "40 55 53 56 57 48 8D 6C 24 D8 48 81 EC 28 01 00 00 48 C7 44 24 60", __fastcall,
@@ -118,7 +119,9 @@ REGISTER_GAME_FUNCTION(SendPacket,
 REGISTER_GAME_FUNCTION(GetAudioManager,
                        "F3 44 0F 10 ? ? ? ? ? F3 44 0F 10 ? ? ? ? ? 44 38 B6 D9 02 00 00 0F 84 ? ? ? ? E8 ? ? ? ?",
                        __fastcall, AudioManagerFMOD*);
-
+REGISTER_GAME_FUNCTION(EnforceMinimumFontLineToScreenRatio,
+                       "48 89 5C 24 08 57 48 83 EC 50 0F 29 74 24 40 0F 29 7C 24 30 0F 28 F9",
+                       __fastcall, float, int, float, float);
 REGISTER_GAME_FUNCTION(GetDevicePixelsPerInchDiagonal,
                        "40 53 48 83 EC 20 8B ? ? ? ? ? 85 C9 0F 85 ? ? ? ? F3 0F 10 ? ? ? ? ? 0F 57 C9", __fastcall,
                        int);
@@ -166,6 +169,9 @@ void GameHarness::resolveSharedSigs()
         utils::resolveRelativeCall<GetAudioManager_t>(findMemoryPattern<uint8_t*>(pattern::GetAudioManager) + 31);
     real::GetDevicePixelsPerInchDiagonal =
         findMemoryPattern<GetDevicePixelsPerInchDiagonal_t>(pattern::GetDevicePixelsPerInchDiagonal);
+    real::EnforceMinimumFontLineToScreenRatio =
+        findMemoryPattern<EnforceMinimumFontLineToScreenRatio_t>(
+            pattern::EnforceMinimumFontLineToScreenRatio);
     real::LogToConsole = findMemoryPattern<LogToConsole_t>(pattern::LogToConsole);
     real::g_globalBatcher = utils::resolveLeaCall<void*>(findMemoryPattern<uint8_t*>(pattern::g_globalBatcher));
     real::RenderBatcherFlush = findMemoryPattern<RenderBatcherFlush_t>(pattern::RenderBatcherFlush);

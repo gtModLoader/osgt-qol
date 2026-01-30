@@ -75,6 +75,7 @@ DEFINE_GAME_FUNCTION(LogToConsole, __fastcall, void, const char*, ...);
 DEFINE_GAME_FUNCTION(RenderBatcherFlush, __fastcall, void, void*, unsigned int, int64_t);
 DEFINE_GAME_GLOBAL_VAR(g_globalBatcher, void*);
 // Declared in events.cpp
+DEFINE_GAME_FUNCTION(EnforceMinimumFontLineToScreenRatio, __fastcall, float, int, float, float);
 DEFINE_GAME_FUNCTION(GetArcadeComponent, __fastcall, EntityComponent*);
 DEFINE_GAME_FUNCTION(AddKeyBinding, __fastcall, void, EntityComponent* pComp, std::string name, uint32_t inputcode,
                      uint32_t outputcode, bool bAlsoSendAsNormalRawKey, uint32_t modifiersRequired);
