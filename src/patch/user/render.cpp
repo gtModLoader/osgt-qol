@@ -1505,8 +1505,9 @@ class HighResolutionInventoryScaling : public patch::BasePatch
 
         Entity* pButton = pParentEnt->GetEntityByName(buttonID);
         CL_Vec2f vButtonPos = pButton->GetVar("pos2d")->GetVector2();
+        CL_Vec2f vButtonSize = pButton->GetVar("size2d")->GetVector2();
         vButtonPos.y += real::iPadMapY(5.0f) * nthButton;
-        vButtonPos.x = (vTextPos.x / 2) - real::iPadMapX(6.0f);
+        vButtonPos.x = (pParentEnt->GetVar("size2d")->GetVector2().x / 2) - (vButtonSize.x / 2);
         pButton->GetVar("pos2d")->Set(vButtonPos);
 
         // Recreate touch registration since we just messed with positions.
