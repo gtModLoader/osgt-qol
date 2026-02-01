@@ -44,6 +44,9 @@ class PatchManager
     // Returns a list of all applied user patches.
     std::vector<std::string> getAppliedUserPatchList() const;
 
+    // Returns whether a patch is applied.
+    bool isPatchApplied(const std::string& patchName);
+
   private:
     // Internal structure for storing patch information.
     struct PatchInfo

@@ -394,6 +394,7 @@ class EventsAPI
     boost::signal<void(void)> m_sig_addWasdKeys;
     boost::signal<void(VariantList*)> m_sig_onArcadeInput;
     boost::signal<void(void*, int, bool)> m_sig_netControllerInput;
+    boost::signal<void(void*, __int64, __int64, __int64)> m_sig_onMapLoaded;
 
   private:
     static void __thiscall ItemInfoManagerLoadFromMem(void* this_, char* pBytes, bool arg3);
@@ -401,6 +402,7 @@ class EventsAPI
     static void __fastcall NetControllerLocalOnArcadeInput(void* this_, int keyCode,
                                                            bool bKeyFired);
     static void __fastcall AddWASDKeys();
+    static void __fastcall OnMapLoaded(void* this_, __int64 p1, __int64 p2, __int64 p3);
 };
 
 } // namespace game

@@ -475,6 +475,7 @@ class BubbleOpacityBackport : public patch::BasePatch
 };
 REGISTER_USER_GAME_PATCH(BubbleOpacityBackport, bubble_opacity_backport);
 
+static bool g_lastHideState = false;
 class HideMyUI : public patch::BasePatch
 {
   public:
@@ -483,16 +484,16 @@ class HideMyUI : public patch::BasePatch
         // This patch disables the right-hand UI icons on demand by pressing Ctrl+H.
         // Particularly useful for world builders who might keep accidentally hitting the buttons
         // instead.
-        auto& game = game::GameHarness::get();
-
         auto& events = game::EventsAPI::get();
         events.m_sig_onArcadeInput.connect(&OnArcadeInput);
         events.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
+        events.m_sig_onMapLoaded.connect(&OnMapLoaded);
 
         // Make the opacity toggleable, default at 33%.
         Variant* pVariant = real::GetApp()->GetVar("hide_ui_opacity");
         if (pVariant->GetType() != Variant::TYPE_FLOAT)
             pVariant->Set(0.33f);
+        pVariant->GetSigOnChanged()->connect(&OnOpacitySigFire);
 
         auto& optionsMgr = game::OptionsManager::get();
         optionsMgr.addSliderOption("qol", "UI", "hide_ui_opacity", "Hide UI Opacity",
@@ -501,6 +502,27 @@ class HideMyUI : public patch::BasePatch
         optionsMgr.addCheckboxOption("qol", "UI", "hide_ui_scrollers",
                                      "Hide chat and inventory handles too",
                                      &HideUIScrollHandlesCallback);
+    }
+
+    static void OnMapLoaded(void*, __int64, __int64, __int64)
+    {
+        // Log slider may lose opacity on world change
+        if (g_lastHideState)
+            SetSlidersOpacity(real::GetApp()->GetVar("hide_ui_opacity")->GetFloat());
+    }
+
+    static void OnOpacitySigFire(Variant* pVariant)
+    {
+        if (!g_lastHideState)
+            return;
+        Entity* pMenu = real::GetApp()
+                            ->m_entityRoot->GetEntityByName("GUI")
+                            ->GetEntityByName("WorldSpecificGUI")
+                            ->GetEntityByName("GameMenu");
+        if (pMenu)
+        {
+            SetGameMenuOpacity(pMenu, pVariant->GetFloat());
+        }
     }
 
     static void SetSlidersOpacity(float alphaLevel)
@@ -518,22 +540,51 @@ class HideMyUI : public patch::BasePatch
         }
         if (real::GetApp()->m_entityRoot->GetEntityByName("ConsoleLogParent"))
         {
-            real::GetApp()
-                ->m_entityRoot->GetEntityByName("ConsoleLogParent")
-                ->GetEntityByName("ConsoleGrab")
-                ->GetVar("alpha")
-                ->Set(alphaLevel);
+            Entity* ConsoleGrab = real::GetApp()
+                                      ->m_entityRoot->GetEntityByName("ConsoleLogParent")
+                                      ->GetEntityByName("ConsoleGrab");
+            ConsoleGrab->RemoveComponentByName("Interpolate");
+            ConsoleGrab->GetVar("alpha")->Set(alphaLevel);
         }
     }
 
     static void SetGameMenuOpacity(Entity* pMenu, float alphaLevel)
     {
+        // Check for mods support, each mod must be supported individually.
+        Entity* pTimerOverlay = pMenu->GetParent()->GetEntityByName("TimerOverlay");
+        if (pTimerOverlay)
+            pTimerOverlay->GetVar("alpha")->Set(alphaLevel);
+
+        // If the fade-in animation is going on, suspend it.
+        Entity* pEventMenu = pMenu->GetEntityByName("EVENTS");
+        if (g_lastHideState)
+        {
+            // TouchHandler is responsible for sinking the input for the entity, we want to
+            // get rid of it.
+            pMenu->GetEntityByName("MENU")->RemoveComponentByName("TouchHandler");
+            pMenu->GetEntityByName("CHAT")->RemoveComponentByName("TouchHandler");
+            pMenu->GetEntityByName("FRIENDS")->RemoveComponentByName("TouchHandler");
+            if (pEventMenu)
+                pEventMenu->RemoveComponentByName("TouchHandler");
+            pMenu->GetEntityByName("GemTouch")->RemoveComponentByName("TouchHandler");
+
+            // If the fade-in animation is going on, suspend it.
+            if (pMenu->GetEntityByName("MENU")->GetComponentByName("Interpolate"))
+            {
+                pMenu->GetEntityByName("MENU")->RemoveComponentByName("Interpolate");
+                pMenu->GetEntityByName("CHAT")->RemoveComponentByName("Interpolate");
+                pMenu->GetEntityByName("FRIENDS")->RemoveComponentByName("Interpolate");
+                if (pEventMenu)
+                    pEventMenu->RemoveComponentByName("Interpolate");
+                pMenu->GetEntityByName("GemTouch")->RemoveComponentByName("Interpolate");
+                pMenu->GetEntityByName("BuxEnt")->RemoveComponentByName("Interpolate");
+            }
+        }
         pMenu->GetEntityByName("MENU")->GetVar("alpha")->Set(alphaLevel);
         pMenu->GetEntityByName("CHAT")->GetVar("alpha")->Set(alphaLevel);
         pMenu->GetEntityByName("FRIENDS")->GetVar("alpha")->Set(alphaLevel);
         pMenu->GetEntityByName("GemTouch")->GetVar("alpha")->Set(alphaLevel);
         pMenu->GetEntityByName("BuxEnt")->GetVar("alpha")->Set(alphaLevel);
-        Entity* pEventMenu = pMenu->GetEntityByName("EVENTS");
         if (pEventMenu)
         {
             Variant* pAlphaVar = pEventMenu->GetVar("alpha");
@@ -548,16 +599,6 @@ class HideMyUI : public patch::BasePatch
     static void HideUIOpacitySliderCallback(Variant* pVariant)
     {
         real::GetApp()->GetVar("hide_ui_opacity")->Set(pVariant->GetFloat());
-        Entity* pGUI = real::GetApp()->m_entityRoot->GetEntityByName("GUI");
-        Entity* pMenu = pGUI->GetEntityByName("WorldSpecificGUI")->GetEntityByName("GameMenu");
-        if (pMenu != nullptr)
-        {
-            if (!pMenu->GetEntityByName("MENU")->GetComponentByName("TouchHandler"))
-            {
-                float alphaLevel = pVariant->GetFloat();
-                SetGameMenuOpacity(pMenu, alphaLevel);
-            }
-        }
     }
 
     static void HideUIScrollHandlesCallback(VariantList* pVariant)
@@ -596,39 +637,12 @@ class HideMyUI : public patch::BasePatch
             {
                 // Change opacity of disabled elements to 33% and remove their TouchHandler
                 float alphaLevel = real::GetApp()->GetVar("hide_ui_opacity")->GetFloat();
-                bool bDisabling = true;
-                if (!pMenu->GetEntityByName("MENU")->GetComponentByName("TouchHandler"))
-                {
-                    alphaLevel = 1.00f;
-                    bDisabling = false;
-                }
+                g_lastHideState = !g_lastHideState;
 
                 Entity* pEventMenu = pMenu->GetEntityByName("EVENTS");
-                if (bDisabling)
+                if (!g_lastHideState)
                 {
-                    // TouchHandler is responsible for sinking the input for the entity, we want to
-                    // get rid of it.
-                    pMenu->GetEntityByName("MENU")->RemoveComponentByName("TouchHandler");
-                    pMenu->GetEntityByName("CHAT")->RemoveComponentByName("TouchHandler");
-                    pMenu->GetEntityByName("FRIENDS")->RemoveComponentByName("TouchHandler");
-                    if (pEventMenu)
-                        pEventMenu->RemoveComponentByName("TouchHandler");
-                    pMenu->GetEntityByName("GemTouch")->RemoveComponentByName("TouchHandler");
-
-                    // If the fade-in animation is going on, suspend it.
-                    if (pMenu->GetEntityByName("MENU")->GetComponentByName("Interpolate"))
-                    {
-                        pMenu->GetEntityByName("MENU")->RemoveComponentByName("Interpolate");
-                        pMenu->GetEntityByName("CHAT")->RemoveComponentByName("Interpolate");
-                        pMenu->GetEntityByName("FRIENDS")->RemoveComponentByName("Interpolate");
-                        if (pEventMenu)
-                            pEventMenu->RemoveComponentByName("Interpolate");
-                        pMenu->GetEntityByName("GemTouch")->RemoveComponentByName("Interpolate");
-                        pMenu->GetEntityByName("BuxEnt")->RemoveComponentByName("Interpolate");
-                    }
-                }
-                else
-                {
+                    alphaLevel = 1.00f;
                     // Bring back the input sink for buttons.
                     pMenu->GetEntityByName("MENU")->AddComponent(
                         real::TouchHandlerComponent(operator new(0x120)));

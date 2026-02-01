@@ -16,9 +16,6 @@
 #include "game/struct/custom/playmodoverlay.hpp"
 #include "game/struct/net/enet.hpp"
 
-REGISTER_GAME_FUNCTION(OnMapLoaded,
-                       "40 53 48 83 EC 20 F3 0F 10 ? ? ? ? ? 48 8B D9 C6 81 D4 00 00 00 00",
-                       __fastcall, void, void*, __int64, __int64, __int64);
 REGISTER_GAME_FUNCTION(
     GetMessageTypeFromPacket,
     "48 83 EC 28 48 83 79 18 04 73 13 48 8D ? ? ? ? ? E8 ? ? ? ? 33 C0 48 83 C4 28 C3", __fastcall,
@@ -81,9 +78,6 @@ class PlaymodTimersOverlay : public patch::BasePatch
         // to the loop and immediate reconstruction of the overlay is done.
 
         auto& game = game::GameHarness::get();
-        // Used for constructing the overlay after we got signal that the map is loaded.
-        game.hookFunctionPatternDirect<OnMapLoaded_t>(pattern::OnMapLoaded, OnMapLoaded,
-                                                      &real::OnMapLoaded);
         // We need to receive modded packets from server. We COULD hook into ENetClient functions
         // instead.
         game.hookFunctionPatternDirect<GetMessageTypeFromPacket_t>(
@@ -102,6 +96,10 @@ class PlaymodTimersOverlay : public patch::BasePatch
         // LoadFromMem is a good enough signal that we should ask for playmod data.
         auto& events = game::EventsAPI::get();
         events.m_sig_loadFromMem.connect(&PlaymodTimersOverlay::refreshItemDB);
+
+        // Used for constructing the overlay after we got signal that the map is loaded.
+        events.m_sig_onMapLoaded.connect(&PlaymodTimersOverlay::OnMapLoaded);
+
         // TODO: Clear UI on server exit.
 
         // In-game way of toggling overlay visibility
@@ -303,9 +301,8 @@ class PlaymodTimersOverlay : public patch::BasePatch
         return res;
     }
 
-    static void __fastcall OnMapLoaded(void* this_, __int64 p1, __int64 p2, __int64 p3)
+    static void OnMapLoaded(void* this_, __int64 p1, __int64 p2, __int64 p3)
     {
-        real::OnMapLoaded(this_, p1, p2, p3);
         if (!g_IsOverlayHidden)
             ConstructOverlay();
     }
@@ -324,6 +321,7 @@ class PlaymodTimersOverlay : public patch::BasePatch
         // variable for easier retrieval here rather than needing to recalculate it.
         Entity* pOverlayEnt = pWorldSpecificGUI->AddEntityToFront(new Entity("TimerOverlay"));
         pOverlayEnt->GetVar("pos2d")->Set(CL_Vec2f(16, g_lastOverlayHeight));
+        pOverlayEnt->GetVarWithDefault("alpha", Variant(1.0f));
 
         CL_Vec2f Bounds(0, 0);
         // std::sort(g_activeMods.begin(), g_activeMods.end());
@@ -345,6 +343,8 @@ class PlaymodTimersOverlay : public patch::BasePatch
         pOverlayEnt->GetFunction("OnUpdate")
             ->sig_function.connect(
                 1, boost::bind(&PlaymodTimersOverlay::OnOverlayUpdate, pOverlayEnt, _1));
+        pOverlayEnt->GetVar("alpha")->GetSigOnChanged()->connect(
+            1, boost::bind(&PlaymodTimersOverlay::OnOverlayAlphaChange, pOverlayEnt, _1));
     }
 
     static void UpdateOverlayTimer(short PlaymodID, time_t killstamp)
@@ -388,9 +388,16 @@ class PlaymodTimersOverlay : public patch::BasePatch
         if (!pWorldSpecificGUI)
             return;
         Entity* pOverlayEnt = pWorldSpecificGUI->GetEntityByName("TimerOverlay");
+        float fOpacity = 1.00f;
         if (pOverlayEnt)
+        {
+            fOpacity = pOverlayEnt->GetVar("alpha")->GetFloat();
             pWorldSpecificGUI->RemoveEntityByAddress(pOverlayEnt);
+        }
         ConstructOverlay();
+        pOverlayEnt = pWorldSpecificGUI->GetEntityByName("TimerOverlay");
+        if (pOverlayEnt)
+            pOverlayEnt->GetVar("alpha")->Set(fOpacity);
     }
 
     static PlaymodTimerEntity* CreateTicker(int ItemID, Entity* ParentEnt, CL_Vec2f& bounds)
@@ -403,6 +410,7 @@ class PlaymodTimersOverlay : public patch::BasePatch
         Entity* pIcon = DrawIcon(ItemID, pTimerEnt, IconBounds);
         Entity* pTextLabel = real::CreateTextLabelEntity(pTimerEnt, "txt", 42.0f, 0, "0:00");
         SetTextShadowColor(pTextLabel, 150);
+        pTextLabel->GetVar("alpha")->Set(ParentEnt->GetVar("alpha")->GetFloat());
         if (g_playmodIconHeight == 0.0f || g_bRecalculateIconHeight)
         {
             // Basically icon size + some extra padding.
@@ -480,12 +488,26 @@ class PlaymodTimersOverlay : public patch::BasePatch
         return;
     }
 
+    static void OnOverlayAlphaChange(Entity* pEnt, Variant* pVariant)
+    {
+        std::vector<Entity*> pTimerEnts;
+        pEnt->GetEntitiesByName(&pTimerEnts, "PlaymodTimerEntity", 1);
+        for (auto it = pTimerEnts.begin(); it != pTimerEnts.end(); it++)
+        {
+            (*it)->GetEntityByName("tileIcon")->GetVar("alpha")->Set(pVariant->GetFloat());
+            (*it)->GetEntityByName("txt")->GetVar("alpha")->Set(pVariant->GetFloat());
+        }
+    }
+
     static Entity* DrawIcon(int ItemID, Entity* ParentEnt, CL_Vec2f& bounds)
     {
         if (ItemID == 0)
             ItemID = 1;
         Entity* pIcon = real::SetupEntityIconFromItem(&ItemID, ParentEnt, &bounds, 0, true);
         pIcon->GetVar("scale2d")->Set(CL_Vec2f(1.5f));
+        pIcon->GetVar("alpha")->Set(ParentEnt->GetParent()->GetVar("alpha")->GetFloat());
+        // NOTE: The border only disappears if opacity is at 0.00f, a byproduct of
+        // InventoryComponent's GUIItem not respecting opacity values.
         return pIcon;
     }
 

@@ -77,4 +77,11 @@ std::vector<std::string> PatchManager::getAppliedUserPatchList() const
     return patches;
 }
 
+bool PatchManager::isPatchApplied(const std::string& name)
+{
+    if (patchMap.find(name) == patchMap.end())
+        return false;
+    return patchMap[name].applied;
+}
+
 } // namespace patch

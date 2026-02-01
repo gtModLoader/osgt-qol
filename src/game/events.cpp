@@ -37,6 +37,9 @@ REGISTER_GAME_FUNCTION(
     "48 89 5C 24 10 48 89 6C 24 18 48 89 74 24 20 57 41 56 41 57 48 83 EC 40 48 8B 71", __thiscall,
     void, void*, char*, bool);
 
+REGISTER_GAME_FUNCTION(OnMapLoaded,
+                       "40 53 48 83 EC 20 F3 0F 10 ? ? ? ? ? 48 8B D9 C6 81 D4 00 00 00 00",
+                       __fastcall, void, void*, __int64, __int64, __int64);
 namespace game
 {
 
@@ -68,6 +71,8 @@ void game::EventsAPI::initialize()
     game.hookFunctionPatternDirect<ItemInfoManagerLoadFromMem_t>(
         pattern::ItemInfoManagerLoadFromMem, ItemInfoManagerLoadFromMem,
         &real::ItemInfoManagerLoadFromMem);
+    game.hookFunctionPatternDirect<OnMapLoaded_t>(pattern::OnMapLoaded, OnMapLoaded,
+                                                  &real::OnMapLoaded);
 }
 
 void game::EventsAPI::ItemInfoManagerLoadFromMem(void* this_, char* pBytes, bool arg3)
@@ -94,4 +99,11 @@ void game::EventsAPI::AddWASDKeys()
     auto& EventsAPI = game::EventsAPI::get();
     (EventsAPI.m_sig_addWasdKeys)();
 }
+void game::EventsAPI::OnMapLoaded(void* this_, __int64 p1, __int64 p2, __int64 p3)
+{
+    real::OnMapLoaded(this_, p1, p2, p3);
+    auto& EventsAPI = game::EventsAPI::get();
+    (EventsAPI.m_sig_onMapLoaded)(this_, p1, p2, p3);
+}
+
 }; // namespace game

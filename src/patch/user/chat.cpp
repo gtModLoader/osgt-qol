@@ -198,9 +198,15 @@ class NoGuildIconPatch : public patch::BasePatch
             real::GetApp()->m_serverProtocol = 0x23;
             real::AddMainMenuControls(pEnt);
             real::GetApp()->m_serverProtocol = originalProtocol;
-            return;
         }
-        real::AddMainMenuControls(pEnt);
+        else
+            real::AddMainMenuControls(pEnt);
+        auto& patchMgr = patch::PatchManager::get();
+        if (patchMgr.isPatchApplied("hide_my_ui"))
+        {
+            Variant* pVariant = real::GetApp()->GetVar("hide_ui_opacity");
+            pVariant->Set(pVariant->GetFloat());
+        }
     }
 };
 REGISTER_USER_GAME_PATCH(NoGuildIconPatch, no_guild_icon);
