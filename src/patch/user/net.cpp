@@ -180,10 +180,14 @@ class ServerSwitcher : public patch::BasePatch
         if (pEnt)
             pServerInput = pEnt->GetParent()->GetEntityByName("osgt_qol_server_input");
         else
+        {
+            // We have to call "ByNameRecursively" here because when you launch the game, OnlineMenu
+            // goes under "GUI", but when you change resolutions *before* entering the game, it
+            // suddenly changes whose the parent and causes game to crash.. kinda weird.
             pServerInput = real::GetApp()
-                               ->m_entityRoot->GetEntityByName("GUI")
-                               ->GetEntityByName("OnlineMenu")
+                               ->m_entityRoot->GetEntityByNameRecursively("OnlineMenu")
                                ->GetEntityByName("osgt_qol_server_input");
+        }
 
         if (pServerInput != nullptr)
         {
