@@ -35,10 +35,6 @@ REGISTER_GAME_FUNCTION(
     "40 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 60 FF FF FF 48 81 EC A0 01 00 00 48 C7 44 24 "
     "50 FE FF FF FF 48 89 9C 24 F0 01 00 00 48 8B ? ? ? ? ? 48 33 C4 48 89 85 90 00 00 00 45 0F B6",
     __fastcall, void, void*, EntityComponent* pComp, bool, bool);
-REGISTER_GAME_FUNCTION(
-    GetDevicePixelsPerInchDiagonal,
-    "40 53 48 83 EC 20 8B ? ? ? ? ? 85 C9 0F 85 ? ? ? ? F3 0F 10 ? ? ? ? ? 0F 57 C9", __fastcall,
-    int);
 
 REGISTER_GAME_FUNCTION(VideoModeManagerSetFullscreenMode,
                        "40 53 48 83 EC 30 48 8B D9 E8 ? ? ? ? 48 8B C8 E8 ? ? ? ? 84 C0",
@@ -82,9 +78,6 @@ class SaveAndLogLocationFixer : public patch::BasePatch
 
         // DPI never gets recalculated after launching the game, resulting in some elements being
         // wrongly sized, we'll reset it with a small hack.
-        real::GetDevicePixelsPerInchDiagonal =
-            game.findMemoryPattern<GetDevicePixelsPerInchDiagonal_t>(
-                pattern::GetDevicePixelsPerInchDiagonal);
         g_devicePixelsPerInch =
             utils::resolveMovCall<int*>((uint8_t*)real::GetDevicePixelsPerInchDiagonal + 6);
 
@@ -191,6 +184,12 @@ class SaveAndLogLocationFixer : public patch::BasePatch
         // bar being either ridiculously small or big), let's force game to recalculate DPI next
         // time it fetches it by setting the global for it to 0.
         *g_devicePixelsPerInch = 0;
+        real::GetDevicePixelsPerInchDiagonal();
+
+        // If anyone cares to tamper with the DPI, we'll let them do it outside the core patch,
+        // we've done our job here already.
+        auto& events = game::EventsAPI::get();
+        (events.m_sig_postInitVideo)();
         return retVal;
     }
 };

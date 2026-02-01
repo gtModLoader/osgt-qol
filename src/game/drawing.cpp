@@ -131,6 +131,11 @@ REGISTER_GAME_FUNCTION(
     "F3 44 0F 10 ? ? ? ? ? F3 44 0F 10 ? ? ? ? ? 44 38 B6 D9 02 00 00 0F 84 ? ? ? ? E8 ? ? ? ?",
     __fastcall, AudioManagerFMOD*);
 
+REGISTER_GAME_FUNCTION(
+    GetDevicePixelsPerInchDiagonal,
+    "40 53 48 83 EC 20 8B ? ? ? ? ? 85 C9 0F 85 ? ? ? ? F3 0F 10 ? ? ? ? ? 0F 57 C9", __fastcall,
+    int);
+
 namespace game
 {
 void GameHarness::resolveSharedSigs()
@@ -168,6 +173,8 @@ void GameHarness::resolveSharedSigs()
     real::SendPacket = findMemoryPattern<SendPacket_t>(pattern::SendPacket);
     real::GetAudioManager = utils::resolveRelativeCall<GetAudioManager_t>(
         findMemoryPattern<uint8_t*>(pattern::GetAudioManager) + 31);
+    real::GetDevicePixelsPerInchDiagonal = findMemoryPattern<GetDevicePixelsPerInchDiagonal_t>(
+        pattern::GetDevicePixelsPerInchDiagonal);
 }
 
 // /!\ Out of Order!

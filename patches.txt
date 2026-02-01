@@ -88,3 +88,6 @@ Fixes the "bouncyness" of chat and inventory grab handles if you release them fa
 
 Fixes muting music channel. Otherwise it inherits your SFX volume
 +audio_mute_fix
+
+Makes inventory and chat handles more sensible for desktop use on high resolutions
++better_log_grab_dpi

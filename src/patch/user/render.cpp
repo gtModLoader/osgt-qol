@@ -122,6 +122,9 @@ REGISTER_GAME_FUNCTION(WorldRendererTileLineOfSight,
 REGISTER_GAME_FUNCTION(WorldRendererDrawTiles, "48 8B C4 55 57 41 54 41 55 41 57", __fastcall, void,
                        void*, std::vector<Tile*>*, int);
 
+REGISTER_GAME_FUNCTION(SetGrabBarSize, "48 89 5C 24 08 57 48 83 EC 20 48 8B F9 BB A3 00 00 00 E8",
+                       __fastcall, void, Entity*);
+
 REGISTER_GAME_FUNCTION(CreateOptionsMenu,
                        "48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 48 83 EC 20 83 39 00 48 8B "
                        "F9 75 1E C7 01 05 00 00 00 C7 41 10 00 00 00 00",
@@ -924,6 +927,115 @@ class LightSourceOptimizer : public patch::BasePatch
     }
 };
 REGISTER_USER_GAME_PATCH(LightSourceOptimizer, lightsource_optimized);
+
+static int* g_devicePixelsPerInch = nullptr;
+class BetterLogGrabDPI : public patch::BasePatch
+{
+  public:
+    void apply() const override
+    {
+        // The DPI values provided by game look rather amusing on a desktop on high resolutions,
+        // they were more meant for mobile platforms or touchscreens. Considering the core
+        // demographic of this mod is going to be mouse & keyboard users, we can afford to make the
+        // DPI a bit more sensible.
+        // This mod also adds 4K scaling to grab handles.
+        g_devicePixelsPerInch =
+            utils::resolveMovCall<int*>((uint8_t*)real::GetDevicePixelsPerInchDiagonal + 6);
+
+        auto& game = game::GameHarness::get();
+        real::SetGrabBarSize = game.findMemoryPattern<SetGrabBarSize_t>(pattern::SetGrabBarSize);
+
+        auto& events = game::EventsAPI::get();
+        events.m_sig_postInitVideo.connect(&postInitVideo);
+
+        Variant* pVariant = real::GetApp()->GetVar("osgt_qol_loggrab_dpi");
+        if (pVariant->GetType() == Variant::TYPE_UNUSED)
+            pVariant->Set(1U);
+
+        auto& optionsMgr = game::OptionsManager::get();
+        optionsMgr.addCheckboxOption("qol", "UI", "osgt_qol_loggrab_dpi",
+                                     "Use DPI scales more fit for desktop use on high resolutions",
+                                     &DPIScaleToggle);
+    }
+
+    static void DPIScaleToggle(VariantList* pVariant)
+    {
+        Entity* pCheckbox = pVariant->Get(1).GetEntity();
+        bool bChecked = pCheckbox->GetVar("checked")->GetUINT32() != 0;
+        real::GetApp()->GetVar("osgt_qol_loggrab_dpi")->Set(uint32_t(bChecked));
+
+        // Reset DPI scale
+        *g_devicePixelsPerInch = 0;
+        real::GetDevicePixelsPerInchDiagonal();
+        if (bChecked)
+            postInitVideo();
+
+        Entity* pConsoleLogParent =
+            real::GetApp()->m_entityRoot->GetEntityByName("ConsoleLogParent");
+        if (pConsoleLogParent)
+        {
+            Entity* pConsoleGrab = pConsoleLogParent->GetEntityByName("ConsoleGrab");
+            if (pConsoleGrab)
+            {
+                // SetGrabBarSize will use scale2d as a reference point, reset it to 1.0.
+                pConsoleGrab->GetVar("scale2d")->Set(CL_Vec2f{1.0, 1.0});
+                real::SetGrabBarSize(pConsoleGrab);
+            }
+        }
+        else
+            return;
+
+        Entity* pGUI = real::GetApp()->m_entityRoot->GetEntityByName("GUI");
+        if (!pGUI)
+            return;
+        Entity* pWorldGUI = pGUI->GetEntityByName("WorldSpecificGUI");
+        if (!pWorldGUI)
+            return;
+        Entity* pGameMenu = pWorldGUI->GetEntityByName("GameMenu");
+        if (!pGameMenu)
+            return;
+
+        Entity* pInventoryGrab = pGameMenu->GetEntityByNameRecursively("InventoryGrab");
+        if (pInventoryGrab)
+        {
+            pInventoryGrab->GetVar("scale2d")->Set(CL_Vec2f{1.0, 1.0});
+            real::SetGrabBarSize(pInventoryGrab);
+        }
+    }
+
+    static void postInitVideo()
+    {
+        Rectf screenRect;
+        real::GetScreenRect(screenRect);
+
+        // Already rather low DPI, don't attempt.
+        if (*g_devicePixelsPerInch < 273)
+            return;
+
+        // 2K (2560 x H) - Height range 1440-1800
+        if (screenRect.right == 2560 && (screenRect.bottom >= 1440 && screenRect.bottom <= 1800))
+        {
+            *g_devicePixelsPerInch = 350;
+            return;
+        }
+
+        // 4K (W x 2160) - Width range 3840-4096
+        if ((screenRect.right >= 3840 && screenRect.right <= 4096) && screenRect.bottom == 2160)
+        {
+            *g_devicePixelsPerInch = 500;
+            return;
+        }
+
+        // 8K would need to be added here as well if anyone cares/has a display with it.
+
+        // Fallback scaling for resolutions originally supported, but not covered (2K by this
+        // formula is ~365 DPI)
+        // 4K would still be at 273 since the game never sets it a proper DPI.
+        if (*g_devicePixelsPerInch > 273)
+            *g_devicePixelsPerInch = 273 + ((*g_devicePixelsPerInch - 273) / 3);
+    }
+};
+REGISTER_USER_GAME_PATCH(BetterLogGrabDPI, better_log_grab_dpi);
 
 class LiveGUIRebuilder : public patch::BasePatch
 {

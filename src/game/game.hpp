@@ -395,6 +395,7 @@ class EventsAPI
     boost::signal<void(VariantList*)> m_sig_onArcadeInput;
     boost::signal<void(void*, int, bool)> m_sig_netControllerInput;
     boost::signal<void(void*, __int64, __int64, __int64)> m_sig_onMapLoaded;
+    boost::signal<void(void)> m_sig_postInitVideo;
 
   private:
     static void __thiscall ItemInfoManagerLoadFromMem(void* this_, char* pBytes, bool arg3);
