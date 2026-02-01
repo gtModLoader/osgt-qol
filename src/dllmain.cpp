@@ -36,8 +36,7 @@ void setup()
     auto& game = game::GameHarness::get();
     auto& patchMgr = patch::PatchManager::get();
     auto& optionsMgr = game::OptionsManager::get();
-    auto& input = game::InputEvents::get();
-    auto& itemAPI = game::ItemAPI::get();
+    auto& events = game::EventsAPI::get();
     auto& weatherMgr = game::WeatherManager::get();
 
     try
@@ -71,8 +70,7 @@ void setup()
         game.setWindowTitle("Growtopia [" + versionString + "] - Patching the game - Please wait!");
         optionsMgr.initialize();
         optionsMgr.addOptionPage("qol", "OSGT-QOL Settings");
-        input.initialize();
-        itemAPI.initialize();
+        events.initialize();
         weatherMgr.initialize();
         patchMgr.applyPatchesFromFile("patches.txt");
         // game.toggleLoadScreen();

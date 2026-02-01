@@ -10,8 +10,8 @@ class ReportVersionToServer : public patch::BasePatch
     {
         // We will let the server transparently know that we are a modded user and also give them
         // our version.
-        auto& itemapi = game::ItemAPI::get();
-        itemapi.m_sig_loadFromMem.connect(&ReportVersionToServer::refreshItemDB);
+        auto& events = game::EventsAPI::get();
+        events.m_sig_loadFromMem.connect(&ReportVersionToServer::refreshItemDB);
     }
 
     static void refreshItemDB()

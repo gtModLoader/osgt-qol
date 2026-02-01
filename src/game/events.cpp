@@ -1,6 +1,5 @@
 #include "game.hpp"
 #include "game/struct/gamepadmanager.hpp"
-#include "signatures.hpp"
 
 REGISTER_GAME_FUNCTION(NetControllerLocalOnArcadeInput,
                        "48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 41 0F B6 D8 8B F2 48 8B F9 ? "
@@ -32,16 +31,22 @@ REGISTER_GAME_FUNCTION(AddKeyBinding, "40 55 56 57 48 8D AC 24 50 FD FF FF 48 81
 REGISTER_GAME_FUNCTION(GetGamepadManager,
                        "E8 ? ? ? ? 48 8B 48 28 48 2B 48 20 48 C1 F9 03 48 85 C9 74 3E", __fastcall,
                        GamepadManager*);
+
+REGISTER_GAME_FUNCTION(
+    ItemInfoManagerLoadFromMem,
+    "48 89 5C 24 10 48 89 6C 24 18 48 89 74 24 20 57 41 56 41 57 48 83 EC 40 48 8B 71", __thiscall,
+    void, void*, char*, bool);
+
 namespace game
 {
 
-InputEvents& InputEvents::get()
+EventsAPI& EventsAPI::get()
 {
-    static InputEvents instance;
+    static EventsAPI instance;
     return instance;
 }
 
-void game::InputEvents::initialize()
+void game::EventsAPI::initialize()
 {
     auto& game = game::GameHarness::get();
 
@@ -60,25 +65,33 @@ void game::InputEvents::initialize()
                                                     &real::OnArcadeInput);
     game.hookFunctionPatternDirect<AddWASDKeys_t>(pattern::AddWASDKeys, AddWASDKeys,
                                                   &real::AddWASDKeys);
+    game.hookFunctionPatternDirect<ItemInfoManagerLoadFromMem_t>(
+        pattern::ItemInfoManagerLoadFromMem, ItemInfoManagerLoadFromMem,
+        &real::ItemInfoManagerLoadFromMem);
 }
 
-void game::InputEvents::OnArcadeInput(VariantList* pVL)
+void game::EventsAPI::ItemInfoManagerLoadFromMem(void* this_, char* pBytes, bool arg3)
+{
+    real::ItemInfoManagerLoadFromMem(this_, pBytes, arg3);
+    auto& EventsAPI = game::EventsAPI::get();
+    (EventsAPI.m_sig_loadFromMem)();
+}
+void game::EventsAPI::OnArcadeInput(VariantList* pVL)
 {
     real::OnArcadeInput(pVL);
-    auto& inputEvents = game::InputEvents::get();
-    (inputEvents.m_sig_onArcadeInput)(pVL);
+    auto& EventsAPI = game::EventsAPI::get();
+    (EventsAPI.m_sig_onArcadeInput)(pVL);
 }
-void game::InputEvents::NetControllerLocalOnArcadeInput(void* this_, int keyCode, bool bKeyFired)
+void game::EventsAPI::NetControllerLocalOnArcadeInput(void* this_, int keyCode, bool bKeyFired)
 {
     real::NetControllerLocalOnArcadeInput(this_, keyCode, bKeyFired);
-    auto& inputEvents = game::InputEvents::get();
-    (inputEvents.m_sig_netControllerInput)(this_, keyCode, bKeyFired);
+    auto& EventsAPI = game::EventsAPI::get();
+    (EventsAPI.m_sig_netControllerInput)(this_, keyCode, bKeyFired);
 }
-void game::InputEvents::AddWASDKeys()
+void game::EventsAPI::AddWASDKeys()
 {
     real::AddWASDKeys();
-    auto& inputEvents = game::InputEvents::get();
-    (inputEvents.m_sig_addWasdKeys)();
+    auto& EventsAPI = game::EventsAPI::get();
+    (EventsAPI.m_sig_addWasdKeys)();
 }
-
 }; // namespace game

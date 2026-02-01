@@ -485,9 +485,9 @@ class HideMyUI : public patch::BasePatch
         // instead.
         auto& game = game::GameHarness::get();
 
-        auto& inputEvents = game::InputEvents::get();
-        inputEvents.m_sig_onArcadeInput.connect(&OnArcadeInput);
-        inputEvents.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
+        auto& events = game::EventsAPI::get();
+        events.m_sig_onArcadeInput.connect(&OnArcadeInput);
+        events.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
 
         // Make the opacity toggleable, default at 33%.
         Variant* pVariant = real::GetApp()->GetVar("hide_ui_opacity");

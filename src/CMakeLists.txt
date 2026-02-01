@@ -3,9 +3,8 @@ set(SOURCES
     dinput8.def
     res/icon.rc
     game/game.cpp
-    game/input.cpp
-    game/itemapi.cpp
     game/drawing.cpp
+    game/events.cpp
     game/options.cpp
     game/weathermanager.cpp
     game/struct/entityutils.cpp

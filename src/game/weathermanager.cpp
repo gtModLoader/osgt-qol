@@ -35,8 +35,8 @@ void game::WeatherManager::initialize()
         pattern::WorldRendererForceBackground, WorldRendererForceBackground,
         &real::WorldRendererForceBackground);
 
-    auto& itemapi = game::ItemAPI::get();
-    itemapi.m_sig_loadFromMem.connect(&game::WeatherManager::refreshItemDB);
+    auto& events = game::EventsAPI::get();
+    events.m_sig_loadFromMem.connect(&game::WeatherManager::refreshItemDB);
 }
 
 void game::WeatherManager::refreshItemDB()

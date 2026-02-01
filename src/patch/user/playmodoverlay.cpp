@@ -100,8 +100,8 @@ class PlaymodTimersOverlay : public patch::BasePatch
             &real::GameLogicComponentKillWorld);
 
         // LoadFromMem is a good enough signal that we should ask for playmod data.
-        auto& itemapi = game::ItemAPI::get();
-        itemapi.m_sig_loadFromMem.connect(&PlaymodTimersOverlay::refreshItemDB);
+        auto& events = game::EventsAPI::get();
+        events.m_sig_loadFromMem.connect(&PlaymodTimersOverlay::refreshItemDB);
         // TODO: Clear UI on server exit.
 
         // In-game way of toggling overlay visibility

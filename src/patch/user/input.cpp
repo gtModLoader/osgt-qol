@@ -51,9 +51,9 @@ class QuickbarHotkeys : public patch::BasePatch
             game.findMemoryPattern<ToolSelectComponentOnTouchStart_t>(
                 pattern::ToolSelectComponentOnTouchStart);
 
-        auto& inputEvents = game::InputEvents::get();
-        inputEvents.m_sig_netControllerInput.connect(&NetControllerLocalOnArcadeInput);
-        inputEvents.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
+        auto& events = game::EventsAPI::get();
+        events.m_sig_netControllerInput.connect(&NetControllerLocalOnArcadeInput);
+        events.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
     }
 
     static void __fastcall NetControllerLocalOnArcadeInput(void* this_, int keyCode, bool bKeyFired)
@@ -119,9 +119,9 @@ class QuickToggleSpaceToPunch : public patch::BasePatch
         real::AddSpacebarBinding =
             game.findMemoryPattern<AddSpacebarBinding_t>(pattern::AddSpacebarBinding);
 
-        auto& inputEvents = game::InputEvents::get();
-        inputEvents.m_sig_netControllerInput.connect(&NetControllerLocalOnArcadeInput);
-        inputEvents.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
+        auto& events = game::EventsAPI::get();
+        events.m_sig_netControllerInput.connect(&NetControllerLocalOnArcadeInput);
+        events.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
     }
 
     static void __fastcall NetControllerLocalOnArcadeInput(void* this_, int keyCode, bool bKeyFired)
@@ -201,8 +201,8 @@ class ToggleCtrlJump : public patch::BasePatch
         optionsMgr.addCheckboxOption("qol", "Input", "osgt_qol_toggle_ctrl_jump",
                                      "Disable CTRL key to Jump", &HideUIScrollHandlesCallback);
 
-        auto& inputEvents = game::InputEvents::get();
-        inputEvents.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
+        auto& events = game::EventsAPI::get();
+        events.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
     }
 
     static void HideUIScrollHandlesCallback(VariantList* pVariant)

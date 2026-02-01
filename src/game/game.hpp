@@ -380,26 +380,14 @@ class WeatherManager
 };
 
 // For now this just serves as a way to get signalled on events.
-class ItemAPI
+class EventsAPI
 {
   public:
-    static ItemAPI& get();
+    static EventsAPI& get();
 
     void initialize();
 
     boost::signal<void(void)> m_sig_loadFromMem;
-
-  private:
-    static void __thiscall ItemInfoManagerLoadFromMem(void* this_, char* pBytes, bool arg3);
-};
-
-// Serves as a way for multiple patches to subscribe to input functions.
-class InputEvents
-{
-  public:
-    static InputEvents& get();
-
-    void initialize();
 
     // NOTE: This also fires when dialogs or options is open, mods have to do their own checks if
     // they care.
@@ -408,6 +396,7 @@ class InputEvents
     boost::signal<void(void*, int, bool)> m_sig_netControllerInput;
 
   private:
+    static void __thiscall ItemInfoManagerLoadFromMem(void* this_, char* pBytes, bool arg3);
     static void __fastcall OnArcadeInput(VariantList* pVL);
     static void __fastcall NetControllerLocalOnArcadeInput(void* this_, int keyCode,
                                                            bool bKeyFired);
