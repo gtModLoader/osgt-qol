@@ -36,7 +36,7 @@ REGISTER_GAME_FUNCTION(
     "50 FE FF FF FF 48 89 9C 24 F0 01 00 00 48 8B ? ? ? ? ? 48 33 C4 48 89 85 90 00 00 00 45 0F B6",
     __fastcall, void, void*, EntityComponent* pComp, bool, bool);
 REGISTER_GAME_FUNCTION(
-    GetDevicePIxelsPerInchDiagonal,
+    GetDevicePixelsPerInchDiagonal,
     "40 53 48 83 EC 20 8B ? ? ? ? ? 85 C9 0F 85 ? ? ? ? F3 0F 10 ? ? ? ? ? 0F 57 C9", __fastcall,
     int);
 
@@ -45,7 +45,7 @@ REGISTER_GAME_FUNCTION(VideoModeManagerSetFullscreenMode,
                        __fastcall, void, VideoModeManager*);
 
 static bool g_wndProcWMSizeDone = false;
-static uint8_t* g_dpiCalcAddr = nullptr;
+static int* g_devicePixelsPerInch = nullptr;
 class SaveAndLogLocationFixer : public patch::BasePatch
 {
   public:
@@ -82,10 +82,11 @@ class SaveAndLogLocationFixer : public patch::BasePatch
 
         // DPI never gets recalculated after launching the game, resulting in some elements being
         // wrongly sized, we'll reset it with a small hack.
-        real::GetDevicePIxelsPerInchDiagonal =
-            game.findMemoryPattern<GetDevicePIxelsPerInchDiagonal_t>(
-                pattern::GetDevicePIxelsPerInchDiagonal);
-        g_dpiCalcAddr = ((uint8_t*)real::GetDevicePIxelsPerInchDiagonal) + 15;
+        real::GetDevicePixelsPerInchDiagonal =
+            game.findMemoryPattern<GetDevicePixelsPerInchDiagonal_t>(
+                pattern::GetDevicePixelsPerInchDiagonal);
+        g_devicePixelsPerInch =
+            utils::resolveMovCall<int*>((uint8_t*)real::GetDevicePixelsPerInchDiagonal + 6);
 
         // We will replace normal AppData path with Current Directory.
         game.hookFunctionPatternDirect<GetSavePath_t>(pattern::GetSavePath, GetSavePath,
@@ -187,12 +188,9 @@ class SaveAndLogLocationFixer : public patch::BasePatch
         }
 
         // The game also never recalculates DPI when changing resolutions (best example is LogGrab
-        // bar being either ridiculously small or big), let's hack it by changing a JNZ instruction
-        // to JZ then call the function and then immediately unpatch it to bypass
-        // g_devicePixelsPerInch != 0 check.
-        utils::fillMemory(g_dpiCalcAddr, 1, 0x84);
-        real::GetDevicePIxelsPerInchDiagonal();
-        utils::fillMemory(g_dpiCalcAddr, 1, 0x85);
+        // bar being either ridiculously small or big), let's force game to recalculate DPI next
+        // time it fetches it by setting the global for it to 0.
+        *g_devicePixelsPerInch = 0;
         return retVal;
     }
 };
