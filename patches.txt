@@ -6,6 +6,7 @@ Audio stuttering fix (e.g. party blaster stutter).
 +audio_stutter_fix
 
 Adds option to raise framerate to match primary monitor (Default: 60 FPS).
++framerate_unlock
 
 Remove chat margin, chat tabs and [S] chat stuff.
 +enable_legacy_chat
