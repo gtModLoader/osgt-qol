@@ -5,8 +5,7 @@ mess with the file parsing process.
 Audio stuttering fix (e.g. party blaster stutter).
 +audio_stutter_fix
 
-Unlock game framerate to match primary monitor.
-+framerate_unlock
+Adds option to raise framerate to match primary monitor (Default: 60 FPS).
 
 Remove chat margin, chat tabs and [S] chat stuff.
 +enable_legacy_chat
