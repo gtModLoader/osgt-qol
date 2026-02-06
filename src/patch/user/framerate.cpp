@@ -43,19 +43,19 @@ class FramerateUnlockPatch : public patch::BasePatch
 
         auto& optionsMgr = game::OptionsManager::get();
                 optionsMgr.addCheckboxOption(
-                    "qol", "Performance", "osgt_qol_fps_temp_killswitch", "Limit FPS back down to 60 (Power Saving)\n",
-                    &OnFPSPowerSaveCallback);
+                    "qol", "Performance", "osgt_qol_fps_unlock", "Raise FPS to match display refresh rate (may affect game physics, parkour)\n",
+                    &OnFPSUnlockCallback);
 
         // Fix crazy pet movement.
         game.hookFunctionPatternDirect<PetRenderDataUpdate_t>(
             pattern::PetRenderDataUpdate, PetRenderDataUpdate, &real::PetRenderDataUpdate);
     }
 
-    static void OnFPSPowerSaveCallback(VariantList* pVariant)
+    static void OnFPSUnlockCallback(VariantList* pVariant)
     {
         Entity* pCheckbox = pVariant->Get(1).GetEntity();
         bool bChecked = pCheckbox->GetVar("checked")->GetUINT32() != 0;
-        real::GetApp()->GetVar("osgt_qol_fps_temp_killswitch")->Set(uint32_t(bChecked));
+        real::GetApp()->GetVar("osgt_qol_fps_unlock")->Set(uint32_t(bChecked));
         SetFPSLimit(nullptr, 60.0f);
     }
 
@@ -69,11 +69,10 @@ class FramerateUnlockPatch : public patch::BasePatch
 
     static void __fastcall SetFPSLimit(void* app, float fps)
     {
-        // Set the FPS limit to the primary display refresh rate if possible. Otherwise, default
-        // to 60.
+        // Default to 60 FPS. Only raise to display refresh rate if user opts in.
         DEVMODE dm;
         dm.dmSize = sizeof(DEVMODE);
-        if (EnumDisplaySettingsA(NULL, ENUM_CURRENT_SETTINGS, &dm) && !real::GetApp()->GetVar("osgt_qol_fps_temp_killswitch")->GetUINT32())
+        if (EnumDisplaySettingsA(NULL, ENUM_CURRENT_SETTINGS, &dm) && real::GetApp()->GetVar("osgt_qol_fps_unlock")->GetUINT32())
         {
             float fpsLimit = static_cast<float>(dm.dmDisplayFrequency);
             // Do not allow over >400fps. The client has a bug where if the game is open for long

@@ -55,7 +55,7 @@ Core Patches (always enabled):
 - Save & Log Location Fixer - Loads save.dat from current working directory and sends game logs to log.txt residing in current working directory
 
 User-facing, most notable/impactful patches:
-- Framerate Unlock patch - Adjusts the game's framerate limit to match the users display refresh rate. Additionally fixes some visuals caused by higher FPS
+- Framerate Unlock patch - Provides an option to raise the game's framerate limit to match the user's display refresh rate (default: 60 FPS).
 - Audio stuttering patch - Forces the game to stream all audio files from disk rather than try load in memory. Playback from memory is broken on Proton's AudioManager FMOD backend
 - Server Switcher - You can now connect to any server that supports V3.02 without modifying hosts file with this mod
 - Cache Location Fixer - Binds game's cache folder to the same folder game installation is on. Useful for people that have multiple Growtopia installations
