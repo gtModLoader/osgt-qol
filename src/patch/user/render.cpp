@@ -4,7 +4,6 @@
 #include "game/struct/graphics/background_blank.hpp"
 #include "game/struct/graphics/background_blood.hpp"
 #include "game/struct/graphics/background_default.hpp"
-#include "game/struct/graphics/surface.hpp"
 #include "patch/patch.hpp"
 #include "utils/utils.hpp"
 
@@ -18,6 +17,8 @@
 #include "game/struct/variant.hpp"
 
 #include "game/struct/world/world.hpp"
+#include "game/struct/world/worldcamera.hpp"
+#include "game/struct/world/worldrenderer.hpp"
 #include <version.h>
 
 // MainMenuCreate
@@ -143,6 +144,15 @@ REGISTER_GAME_FUNCTION(OnPressingBackDuringGameplay,
                        "48 8B C4 55 41 56 41 57 48 8D 68 C8 48 81 EC 20 01 00 00 48 C7 44 24 28 FE "
                        "FF FF FF 48 89 58 08 48 89 70 10 48 89 78 18",
                        __fastcall, void);
+REGISTER_GAME_FUNCTION(WorldCameraOnUpdate,
+                       "40 53 48 83 EC 60 41 8B 00 48 8B D9 89 41 20 41 8B 40 04 89 41 24 F3 0F 2C",
+                       __fastcall, void, WorldCamera*, CL_Vec2f*, CL_Vec2f*);
+REGISTER_GAME_FUNCTION(WorldCameraGetCamWorldPos, "8B 41 10 89 02 8B 41 14 89 42 04 48 8B C2 C3",
+                       __fastcall, CL_Vec2f*, WorldCamera*, CL_Vec2f*);
+REGISTER_GAME_FUNCTION(
+    WorldRendererOnRender,
+    "48 8B C4 55 41 54 41 55 41 56 41 57 48 8D 68 88 48 81 EC 50 01 00 00 48 C7 45 A8 FE FF FF FF",
+    __fastcall, void, WorldRenderer*, CL_Vec2f*);
 
 static std::vector<std::string> displayNames;
 static uint32_t vanillaWeatherBound = 16;
@@ -1156,3 +1166,246 @@ class InstantWorldButtonsPatch : public patch::BasePatch
     }
 };
 REGISTER_USER_GAME_PATCH(InstantWorldButtonsPatch, instant_world_buttons);
+
+class AnchorCameraToPlayerPatch : public patch::BasePatch
+{
+  public:
+    void apply() const override
+    {
+        auto& game = game::GameHarness::get();
+
+        // Nop out the original WorldCamera::OnUpdate clamping logic. We'll add our own toggle for
+        // it.
+        uint8_t* p = game.findMemoryPattern<uint8_t*>("0F 2F 43 10 0F 5B D2 0F 5B C9 F3 0F 59 15");
+        utils::nopMemory(p, 80);
+
+        // WorldCamera::OnUpdate hook for toggling between the anchoring.
+        game.hookFunctionPatternDirect<WorldCameraOnUpdate_t>(
+            pattern::WorldCameraOnUpdate, WorldCameraOnUpdate, &real::WorldCameraOnUpdate);
+        // WorldCamera::GetCamWorldPos for clamping weathers separately while using anchored view,
+        // prevents glitched out weathers.
+        game.hookFunctionPatternDirect<WorldCameraGetCamWorldPos_t>(
+            pattern::WorldCameraGetCamWorldPos, WorldCameraGetCamWorldPos,
+            &real::WorldCameraGetCamWorldPos);
+        // WorldRenderer::OnRender for rendering out-of-bounds greyed out area, otherwise it's not
+        // really obvious where the world ends.
+        game.hookFunctionPatternDirect<WorldRendererOnRender_t>(
+            pattern::WorldRendererOnRender, WorldRendererOnRender, &real::WorldRendererOnRender);
+
+        // These will default to 0 on new vars.
+        m_centerCameraOnPlayer = real::GetApp()->GetVar("osgt_qol_camera_clamp")->GetUINT32();
+        m_hotkeyEnabled = real::GetApp()->GetVar("osgt_qol_quick_clamp")->GetUINT32();
+
+        // Our options, maybe they're better grouped together, but by categorization they should be
+        // in UI and Input respectively.
+        auto& optionsMgr = game::OptionsManager::get();
+        optionsMgr.addCheckboxOption("qol", "UI", "osgt_qol_camera_clamp",
+                                     "Always center camera on player (shows out of bounds)",
+                                     &OnClampCallback);
+        optionsMgr.addCheckboxOption("qol", "Input", "osgt_qol_quick_clamp",
+                                     "Toggle centered camera with Ctrl+C hotkey",
+                                     &OnHotkeyCallback);
+
+        // Subscribe to events for hotkeys
+        auto& events = game::EventsAPI::get();
+        events.m_sig_onArcadeInput.connect(&OnArcadeInput);
+        events.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
+    }
+
+    // Option callbacks
+    static void OnClampCallback(VariantList* pVariant)
+    {
+        Entity* pCheckbox = pVariant->Get(1).GetEntity();
+        m_centerCameraOnPlayer = pCheckbox->GetVar("checked")->GetUINT32() != 0;
+        real::GetApp()->GetVar("osgt_qol_camera_clamp")->Set(uint32_t(m_centerCameraOnPlayer));
+        // Camera update is called anyway each update cycle, so we don't really need to do anything
+        // here.
+    }
+    static void OnHotkeyCallback(VariantList* pVariant)
+    {
+        Entity* pCheckbox = pVariant->Get(1).GetEntity();
+        m_hotkeyEnabled = pCheckbox->GetVar("checked")->GetUINT32() != 0;
+        real::GetApp()->GetVar("osgt_qol_quick_clamp")->Set(uint32_t(m_hotkeyEnabled));
+    }
+
+    // Helper functions for amount of pixels drawn out of world bounds
+    static float getClampedRightBorder(WorldCamera& pCamera, float& clampX)
+    {
+        return pCamera.m_screenSize.x - ((pCamera.m_position.x - clampX) * pCamera.m_zoomLevel.x);
+    }
+    static float getClampedLeftBorder(WorldCamera& pCamera)
+    {
+        return abs(pCamera.m_position.x) * pCamera.m_zoomLevel.x;
+    }
+    static float getClampedTopBorder(WorldCamera& pCamera)
+    {
+        return abs(pCamera.m_position.y) * pCamera.m_zoomLevel.y;
+    }
+    static float getClampedBottomBorder(WorldCamera& pCamera, float& clampY)
+    {
+        return pCamera.m_screenSize.y - ((pCamera.m_position.y - clampY) * pCamera.m_zoomLevel.y);
+    }
+
+    // Camera & render tweaks
+    static void WorldRendererOnRender(WorldRenderer* this_, CL_Vec2f* p2)
+    {
+        real::WorldRendererOnRender(this_, p2);
+
+        if (m_centerCameraOnPlayer)
+        {
+            // We will shadow out the out of bounds areas to prevent confusion with centered camera.
+            // For left and top sides, it's simple, we only need to use current camera position
+            // (this is not directly relative to NetAvatar) and multiply it by the zoom level.
+            // For right and botttom sides, we have to calculate against the tilemap clamping to get
+            // appropriate x/y level.
+            WorldTileMap* pTileMap = real::GetApp()->GetGameLogic()->GetTileMap();
+            float xMax = (float)pTileMap->m_width * 32.0f;
+            float yMax = (float)pTileMap->m_height * 32.0f;
+            float clampX = xMax - this_->m_worldCamera.m_zoomedScreenSize.x;
+            float clampY = yMax - this_->m_worldCamera.m_zoomedScreenSize.y;
+
+            Rectf rect;              // shared rect struct for all the sides
+            CL_Vec2f unk4(0.0, 0.0); // bgfx related, mandatory
+
+            // Left side of world
+            if (this_->m_worldCamera.m_position.x < 0.0)
+            {
+                // Draw from left (0) to right (clamp point) on entire height.
+                rect.right = getClampedLeftBorder(this_->m_worldCamera);
+                rect.bottom = this_->m_worldCamera.m_screenSize.y;
+                rect.ceil();
+                real::DrawFilledRect(rect, 0xAA, 0.0f, &unk4);
+            }
+            // Right side of world
+            if (clampX < this_->m_worldCamera.m_position.x)
+            {
+                // Draw from left (clamp point) to edge of screen on entire height.
+                rect.left = getClampedRightBorder(this_->m_worldCamera, clampX);
+                rect.right = this_->m_worldCamera.m_screenSize.x;
+                rect.top = 0;
+                rect.bottom = this_->m_worldCamera.m_screenSize.y;
+                rect.ceil();
+                real::DrawFilledRect(rect, 0xAA, 0.0f, &unk4);
+            }
+            // Top side of world
+            if (this_->m_worldCamera.m_position.y < 0.0)
+            {
+                rect.right = rect.left = 0;
+                // Exclude world sides on clamp points so we don't overlap.
+                if (this_->m_worldCamera.m_position.x < 0.0)
+                    rect.left = getClampedLeftBorder(this_->m_worldCamera);
+                if (clampX < this_->m_worldCamera.m_position.x)
+                    rect.right = getClampedRightBorder(this_->m_worldCamera, clampX);
+                else
+                    rect.right = this_->m_worldCamera.m_screenSize.x;
+
+                // Draw from top (0) to bottom (clamp point) on entire non-overlapping width.
+                rect.bottom = getClampedTopBorder(this_->m_worldCamera);
+                rect.ceil();
+                real::DrawFilledRect(rect, 0xAA, 0.0f, &unk4);
+            }
+            // Bottom side of world
+            if (clampY < this_->m_worldCamera.m_position.y)
+            {
+                rect.left = rect.right = 0;
+                // Exclude world sides on clamp points so we don't overlap.
+                if (this_->m_worldCamera.m_position.x < 0.0)
+                    rect.left = getClampedLeftBorder(this_->m_worldCamera);
+                if (clampX < this_->m_worldCamera.m_position.x)
+                    rect.right = getClampedRightBorder(this_->m_worldCamera, clampX);
+                else
+                    rect.right = this_->m_worldCamera.m_screenSize.x;
+
+                // Draw from top (clamp point) to bottom of screen on entire non-overlapping width.
+                rect.top = getClampedBottomBorder(this_->m_worldCamera, clampY);
+                rect.bottom = this_->m_worldCamera.m_screenSize.y;
+                rect.ceil();
+                real::DrawFilledRect(rect, 0xAA, 0.0f, &unk4);
+            }
+        }
+    }
+
+    static CL_Vec2f* __fastcall WorldCameraGetCamWorldPos(WorldCamera* this_, CL_Vec2f* p2)
+    {
+        CL_Vec2f* res = real::WorldCameraGetCamWorldPos(this_, p2);
+        // Lock the background position on out-of-bounds
+        if (m_centerCameraOnPlayer)
+        {
+            // Idiomatic way would be to retrieve TileMap through parent WorldRenderer of
+            // WorldCamera, but this will suffice.
+            WorldTileMap* pTileMap = real::GetApp()->GetGameLogic()->GetTileMap();
+            if (this_->m_position.x <= 0.0 && this_->m_position.x != 0.0)
+                res->x = 0.0f;
+            if (this_->m_position.y <= 0.0 && this_->m_position.y != 0.0)
+                res->y = 0.0;
+
+            // Only clamp right side if we haven't clamped left side. This makes weathers not fall
+            // apart when both sides are visible.
+            if (res->x != 0.0f)
+            {
+                float clampX = (float)pTileMap->m_width * 32.0f - this_->m_zoomedScreenSize.x;
+                if (clampX < this_->m_position.x)
+                    res->x = clampX;
+            }
+            if (res->y != 0.0f)
+            {
+                float clampY = (float)pTileMap->m_height * 32.0f - this_->m_zoomedScreenSize.y;
+                if (clampY < this_->m_position.y)
+                    res->y = clampY;
+            }
+        }
+        return res;
+    }
+
+    static void __fastcall WorldCameraOnUpdate(WorldCamera* this_, CL_Vec2f* screenSize,
+                                               CL_Vec2f* zoom)
+    {
+        real::WorldCameraOnUpdate(this_, screenSize, zoom);
+        if (!m_centerCameraOnPlayer)
+        {
+            // Restores the vanilla client clamping logic if we're not using the modification.
+            WorldTileMap* pTileMap = real::GetApp()->GetGameLogic()->GetTileMap();
+            if (this_->m_position.x <= 0.0 && this_->m_position.x != 0.0)
+                this_->m_position.x = 0.0;
+            if (this_->m_position.y <= 0.0 && this_->m_position.y != 0.0)
+                this_->m_position.y = 0.0;
+
+            float clampX = (float)pTileMap->m_width * 32.0f - this_->m_zoomedScreenSize.x;
+            if (clampX < this_->m_position.x)
+                this_->m_position.x = clampX;
+            float clampY = (float)pTileMap->m_height * 32.0f - this_->m_zoomedScreenSize.y;
+            if (clampY < this_->m_position.y)
+                this_->m_position.y = clampY;
+        }
+    }
+
+    // Inputs
+    static void __fastcall OnArcadeInput(VariantList* pVL)
+    {
+        if (!m_hotkeyEnabled)
+            return;
+        if (pVL->Get(0).GetUINT32() == 600007)
+        {
+            if (real::GetApp()->GetGameLogic()->IsDialogOpened())
+                return;
+
+            Entity* pGUI = real::GetApp()->m_entityRoot->GetEntityByName("GUI");
+            if (pGUI->GetEntityByName("OptionsMenu") || pGUI->GetEntityByName("ResolutionMenu") ||
+                pGUI->GetEntityByName("OptionsPage"))
+                return;
+            m_centerCameraOnPlayer = !m_centerCameraOnPlayer;
+            real::GetApp()->GetVar("osgt_qol_camera_clamp")->Set(uint32_t(m_centerCameraOnPlayer));
+        }
+    }
+    static void AddCustomKeybinds()
+    {
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_camera", 67, 600007, 1, 1);
+    }
+
+  private:
+    static bool m_centerCameraOnPlayer;
+    static bool m_hotkeyEnabled;
+};
+bool AnchorCameraToPlayerPatch::m_centerCameraOnPlayer = false;
+bool AnchorCameraToPlayerPatch::m_hotkeyEnabled = false;
+REGISTER_USER_GAME_PATCH(AnchorCameraToPlayerPatch, anchor_camera_to_player);

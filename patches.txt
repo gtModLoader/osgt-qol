@@ -97,3 +97,6 @@ Makes the world buttons appear instantly on the world selection screen
 
 Provides ability to toggle Q to drop current item
 +quick_drop
+
+Adds an option to center camera to player at cost of some aesthetics (able to see out of bounds)
++anchor_camera_to_player

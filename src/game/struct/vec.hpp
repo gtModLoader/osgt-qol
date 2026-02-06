@@ -88,6 +88,14 @@ class Rectf
         this->right = right;
         this->bottom = bottom;
     }
+    void ceil()
+    {
+        this->left = ceilf(this->left);
+        this->top = ceilf(this->top);
+        this->right = ceilf(this->right);
+        this->bottom = ceilf(this->bottom);
+    }
+
     float left, top, right, bottom;
     std::string Print()
     {

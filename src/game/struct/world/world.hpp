@@ -24,6 +24,9 @@ class WorldTileMap
 {
   public:
     void* vftable;
-    uint8_t pad[0x10];
+    int m_width;
+    int m_height;
+    void* m_unk;
     Tile* m_tiles;
+    void* m_pWorldParent;
 };

@@ -1,11 +1,13 @@
 #pragma once
 #include "game/struct/component.hpp"
 
+class WorldTileMap;
+
 // Expected size: 880 bytes
 class GameLogicComponent : public EntityComponent
 {
   public:
-    void* GetTileMap() { return (uint8_t*)m_pWorld + 16; }
+    WorldTileMap* GetTileMap() { return (WorldTileMap*)((uint8_t*)m_pWorld + 16); }
 
     int GetTileWidth() { return *(int*)(reinterpret_cast<uint8_t*>(GetTileMap()) + 8); }
     int GetTileHeight() { return *(int*)(reinterpret_cast<uint8_t*>(GetTileMap()) + 12); }

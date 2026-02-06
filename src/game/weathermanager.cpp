@@ -1,21 +1,12 @@
 #include "game.hpp"
-#include "game/struct/entity.hpp"
 #include "game/struct/graphics/background.hpp"
 #include "signatures.hpp"
-#include "struct/variant.hpp"
+#include "struct/world/worldrenderer.hpp"
 
 REGISTER_GAME_FUNCTION(
     WorldRendererForceBackground,
     "40 55 56 57 48 8B EC 48 83 EC 40 48 C7 45 E0 FE FF FF FF 48 89 5C 24 70 8B F2 48 8B F9 33",
     __thiscall, void, uint8_t*, int, void*, void*);
-
-// Incomplete type
-struct WorldRenderer
-{
-    uint8_t pad[200];
-    Background* m_pWeather;
-    int m_activeWeather;
-};
 
 namespace game
 {
