@@ -15,6 +15,7 @@
 #include "game/struct/playeritems.hpp"
 #include "game/struct/renderutils.hpp"
 #include "game/struct/rtrect.hpp"
+#include "game/struct/trademenu.hpp"
 #include "game/struct/variant.hpp"
 
 #include "game/struct/world/world.hpp"
@@ -199,6 +200,10 @@ REGISTER_GAME_FUNCTION(
     float);
 REGISTER_GAME_FUNCTION(AddMenuButton, "48 8B C4 55 53 56 57 41 54 41 56 41 57 48 8D 6C 24 90",
                        __fastcall, void, std::string, std::string, uint32_t, Entity*);
+REGISTER_GAME_FUNCTION(TradeMenuInit,
+                       "48 8B C4 55 56 57 41 54 41 55 41 56 41 57 48 8D A8 58 FD FF FF 48 81 EC 70 "
+                       "03 00 00 48 C7 45 20 FE FF FF FF",
+                       __fastcall, void, TradeMenu*, std::string*, int);
 
 static std::vector<std::string> displayNames;
 static uint32_t vanillaWeatherBound = 16;
@@ -1475,11 +1480,14 @@ class HighResolutionInventoryScaling : public patch::BasePatch
         // Fixes comically large scaling for inventories on high-res screens on desktop.
         // TODO: Figure out to dynamically resize from options.. re-creating GameMenu or killing
         // Inventory crashes the game.
+        // KNOWN BUG: Resized inventory when switching resolutions will mess up the trade menus.
         auto& game = game::GameHarness::get();
         game.hookFunctionPatternDirect<GetInventoryInfoScale_t>(
             pattern::GetInventoryInfoScale, GetInventoryInfoScale, &real::GetInventoryInfoScale);
         game.hookFunctionPatternDirect<AddMenuButton_t>(pattern::AddMenuButton, AddMenuButton,
                                                         &real::AddMenuButton);
+        game.hookFunctionPatternDirect<TradeMenuInit_t>(pattern::TradeMenuInit, TradeMenuInit,
+                                                        &real::TradeMenuInit);
 
         Variant* pVariant = real::GetApp()->GetVar("osgt_qol_hidpi_invscale");
         if (pVariant->GetType() != Variant::TYPE_FLOAT)
@@ -1497,6 +1505,116 @@ class HighResolutionInventoryScaling : public patch::BasePatch
     {
         g_invScale = pVariant->GetFloat();
         real::GetApp()->GetVar("osgt_qol_hidpi_invscale")->Set(g_invScale);
+    }
+
+    static void __fastcall TradeMenuInit(TradeMenu* pTradeMenu, std::string* s1, int i2)
+    {
+        real::TradeMenuInit(pTradeMenu, s1, i2);
+
+        if (!g_usingScaledInventory)
+            return;
+
+        Entity* pTradeGUI =  pTradeMenu->m_pTradeGUI;
+        if (pTradeGUI != nullptr)
+        {
+            std::vector<Entity*> rects;
+            // The trade windows have no name, but they're also the only ones in entity list without
+            // one, so we can use that as a way to find them.
+            pTradeGUI->GetEntitiesByName(&rects, "");
+            if (rects.size() != 2)
+                return;
+
+            // Resize text against our scaling.
+            Entity* pTextEnt = rects.front()->GetEntityByName("text");
+            real::SetupTextEntity(pTextEnt, 0, GetInventoryInfoScale() / 2.0f);
+
+            CL_Vec2f vSize = rects.front()->GetVar("size2d")->GetVector2();
+            CL_Vec2f vTextPos = pTextEnt->GetVar("pos2d")->GetVector2();
+            CL_Vec2f vTextSize = pTextEnt->GetVar("size2d")->GetVector2();
+
+            // Resize the window to fit the text.
+            if (vTextPos.y + vTextSize.y > vSize.y)
+            {
+                float newSizeY = vTextPos.y + vTextSize.y + real::iPadMapY(6.0f);
+                float shiftUp = newSizeY - vSize.y;
+                vSize.y = newSizeY;
+                rects.front()->GetVar("size2d")->Set(vSize);
+                rects.back()->GetVar("size2d")->Set(vSize);
+
+                CL_Vec2f vPos = rects.front()->GetVar("pos2d")->GetVector2();
+                vPos.y -= shiftUp;
+                rects.front()->GetVar("pos2d")->Set(vPos);
+                vPos = rects.back()->GetVar("pos2d")->GetVector2();
+                vPos.y -= shiftUp;
+                rects.back()->GetVar("pos2d")->Set(vPos);
+            }
+
+            // Get amount of dead space in the trade window so we can try center the tools.
+            std::vector<Entity*> tools;
+            rects.front()->GetEntitiesByName(&tools, "Tool");
+            float finalToolX = (tools.back()->GetVar("pos2d")->GetVector2().x +
+                                tools.back()->GetVar("size2d")->GetVector2().x);
+            float deadSpaceX = vSize.x - finalToolX;
+            float toMoveX = deadSpaceX / 4.0f;
+
+            // Actually move stuff, first trade window.
+            for (auto it = tools.begin(); it != tools.end(); it++)
+            {
+                Variant* pVar = (*it)->GetVar("pos2d");
+                CL_Vec2f vPos = pVar->GetVector2();
+                vPos.x += toMoveX;
+                pVar->Set(vPos);
+            }
+            vTextPos.x = tools.front()->GetVar("pos2d")->GetVector2().x;
+            pTextEnt->GetVar("pos2d")->Set(vTextPos);
+
+            // Second trade window.
+            tools.clear();
+            rects.back()->GetEntitiesByName(&tools, "Tool");
+            for (auto it = tools.begin(); it != tools.end(); it++)
+            {
+                Variant* pVar = (*it)->GetVar("pos2d");
+                CL_Vec2f vPos = pVar->GetVector2();
+                vPos.x += toMoveX;
+                pVar->Set(vPos);
+            }
+            // Resize the text here as well.
+            pTextEnt = rects.back()->GetEntityByName("text");
+            real::SetupTextEntity(pTextEnt, 0, GetInventoryInfoScale() / 2.0f);
+            pTextEnt->GetVar("pos2d")->Set(vTextPos);
+
+            // Reposition cancel button to first window position.
+            CL_Vec2f vPos = rects.front()->GetVar("pos2d")->GetVector2();
+            Entity* pCancelTrade = pTradeGUI->GetEntityByName("CancelTrade");
+            CL_Vec2f vCancelPos = pCancelTrade->GetVar("pos2d")->GetVector2();
+            float fCancelDelta = vPos.x - vCancelPos.x;
+            vCancelPos.x = vPos.x;
+            pCancelTrade->GetVar("pos2d")->Set(vCancelPos);
+
+            Entity* pCancelTradeLabel = pTradeGUI->GetEntityByName("LABEL_CancelTrade");
+            CL_Vec2f vCancelLabelPos = pCancelTradeLabel->GetVar("pos2d")->GetVector2();
+            vCancelLabelPos.x += fCancelDelta;
+            pCancelTradeLabel->GetVar("pos2d")->Set(vCancelLabelPos);
+
+            // Reposition accept button to second window position.
+            vPos = rects.back()->GetVar("pos2d")->GetVector2();
+            Entity* pAcceptTrade = pTradeGUI->GetEntityByName("AcceptTrade");
+            CL_Vec2f vAcceptPos = pAcceptTrade->GetVar("pos2d")->GetVector2();
+            float fAcceptDelta = vPos.x - vAcceptPos.x;
+            vAcceptPos.x = vPos.x;
+            pAcceptTrade->GetVar("pos2d")->Set(vAcceptPos);
+
+            Entity* pAcceptTradeLabel = pTradeGUI->GetEntityByName("LABEL_AcceptTrade");
+            CL_Vec2f vAcceptLabelPos = pAcceptTradeLabel->GetVar("pos2d")->GetVector2();
+            vAcceptLabelPos.x += fAcceptDelta;
+            pAcceptTradeLabel->GetVar("pos2d")->Set(vAcceptLabelPos);
+
+            // Recreate touch registration since we just messed with positions.
+            pCancelTradeLabel->RemoveComponentByName("TouchHandler");
+            pCancelTradeLabel->AddComponent(real::TouchHandlerComponent(operator new(0x120)));
+            pAcceptTrade->RemoveComponentByName("TouchHandler");
+            pAcceptTrade->AddComponent(real::TouchHandlerComponent(operator new(0x120)));
+        }
     }
 
     static void __fastcall AddMenuButton(std::string buttonID, std::string buttonText,
