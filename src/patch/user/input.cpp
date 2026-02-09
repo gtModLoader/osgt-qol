@@ -59,17 +59,18 @@ class QuickbarHotkeys : public patch::BasePatch
         auto& events = game::EventsAPI::get();
         events.m_sig_netControllerInput.connect(&NetControllerLocalOnArcadeInput);
         events.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
-        m_toolSelect0 = events.acquireKeycode();
-        m_toolSelect1 = events.acquireKeycode();
-        m_toolSelect2 = events.acquireKeycode();
-        m_toolSelect3 = events.acquireKeycode();
+        for (int i = 0; i < 9; i++)
+        {
+            printf("%d\n", i);
+            m_toolSelect[i] = events.acquireKeycode();
+        }
     }
 
     static void __fastcall NetControllerLocalOnArcadeInput(void* this_, int keyCode, bool bKeyFired)
     {
         // Our custom mappings right now are just on keycode >= 600000
         // See AddCustomKeybinds function.
-        if (keyCode >= m_toolSelect0 && keyCode <= m_toolSelect3)
+        if (keyCode >= m_toolSelect[0] && keyCode <= m_toolSelect[8])
         {
             if (real::GetApp()->GetGameLogic()->IsDialogOpened())
                 return;
@@ -89,14 +90,13 @@ class QuickbarHotkeys : public patch::BasePatch
                 {
                     // When GameMenu is constructed, so is the inventory.
                     // We fake a "touch" event on a quickbar Tool to do the item switch cleanly.
-                    int ToolIndex = keyCode - m_toolSelect0;
+                    int ToolIndex = keyCode - m_toolSelect[0];
                     Entity* pTool = pGameMenu->GetEntityByName("ItemsParent")
-                            ->GetEntityByName("ToolSelectMenu")
-                            ->GetEntityByName("Tool" + std::to_string(ToolIndex));
+                                        ->GetEntityByName("ToolSelectMenu")
+                                        ->GetEntityByName("Tool" + std::to_string(ToolIndex));
                     if (!pTool)
                         return;
-                    EntityComponent* pToolSelect =
-                        pTool->GetComponentByName("ToolSelect");
+                    EntityComponent* pToolSelect = pTool->GetComponentByName("ToolSelect");
                     real::ToolSelectComponentOnTouchStart(pToolSelect);
                 }
             }
@@ -106,37 +106,24 @@ class QuickbarHotkeys : public patch::BasePatch
 
     static void AddCustomKeybinds()
     {
-        // Map the numpad key 0 resetting to Fist/Wrench.
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect0", 96, 600000, 0, 0);
-
-        // Map our custom keybinds for switching between quickbar slots.
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect1", 49, m_toolSelect1, 0,
-                            0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect2", 50, m_toolSelect2, 0,
-                            0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect3", 51, m_toolSelect3, 0,
-                            0);
-        // Also the numpad keys with 0 resetting to Fist/Wrench.
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect0", 96, m_toolSelect0,
-                            0, 0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect1", 97, m_toolSelect1,
-                            0, 0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect2", 98, m_toolSelect2,
-                            0, 0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect3", 99, m_toolSelect3,
-                            0, 0);
+        // Numpad 0 resetting to Fist/Wrench.
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect0", 96,
+                            m_toolSelect[0], 0, 0);
+        for (int i = 1; i < 9; i++)
+        {
+            real::AddKeyBinding(real::GetArcadeComponent(),
+                                "chatkey_ToolSelect" + std::to_string(i), 48 + i, m_toolSelect[i],
+                                0, 0);
+            real::AddKeyBinding(real::GetArcadeComponent(),
+                                "chatkey_NmpToolSelect" + std::to_string(i), 96 + i,
+                                m_toolSelect[i], 0, 0);
+        }
     }
 
   private:
-    static int m_toolSelect0;
-    static int m_toolSelect1;
-    static int m_toolSelect2;
-    static int m_toolSelect3;
+    static int m_toolSelect[9];
 };
-int QuickbarHotkeys::m_toolSelect0;
-int QuickbarHotkeys::m_toolSelect1;
-int QuickbarHotkeys::m_toolSelect2;
-int QuickbarHotkeys::m_toolSelect3;
+int QuickbarHotkeys::m_toolSelect[9];
 REGISTER_USER_GAME_PATCH(QuickbarHotkeys, quickbar_hotkey_patch);
 
 class QuickToggleSpaceToPunch : public patch::BasePatch
