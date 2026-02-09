@@ -29,6 +29,7 @@ DEFINE_GAME_FUNCTION(iPhoneMapX, __fastcall, float, float);
 DEFINE_GAME_FUNCTION(iPhoneMapY, __fastcall, float, float);
 DEFINE_GAME_FUNCTION(SlideScreen, __fastcall, void, Entity*, bool, int, int);
 DEFINE_GAME_FUNCTION(TouchHandlerComponent, __fastcall, EntityComponent*, void*);
+DEFINE_GAME_FUNCTION(TouchHandlerArcadeComponent, __fastcall, EntityComponent*, void*);
 DEFINE_GAME_FUNCTION(MessageManagerCallEntityFunction, __fastcall, void, void*, Entity*, int,
                      std::string, VariantList*, int);
 DEFINE_GAME_FUNCTION(GetMessageManager, __fastcall, void*);

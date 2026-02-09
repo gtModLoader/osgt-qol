@@ -12,6 +12,7 @@
 #include "game/struct/components/mapbg.hpp"
 #include "game/struct/entity.hpp"
 #include "game/struct/entityutils.hpp"
+#include "game/struct/playeritems.hpp"
 #include "game/struct/renderutils.hpp"
 #include "game/struct/rtrect.hpp"
 #include "game/struct/variant.hpp"
@@ -170,6 +171,18 @@ REGISTER_GAME_FUNCTION(UpdateTouchControlPositions,
                        "48 8B C4 55 41 54 41 55 41 56 41 57 48 8D 6C 24 90 48 81 EC 70 01 00 00 48 "
                        "C7 44 24 50 FE FF FF FF",
                        _fastcall, void);
+
+REGISTER_GAME_FUNCTION(GameLogicComponentGetQuickToolInSlot,
+                       "F3 0F 2C ? ? ? ? ? 44 0F BE ? ? ? ? ? 44 03 C0 48 63 C2 44 29 ? ? ? ? ? 0F "
+                       "BF 84 41 E8 01 00 00",
+                       __fastcall, int, GameLogicComponent*, int);
+REGISTER_GAME_FUNCTION(PlayerItemsSetQuickSlotItem,
+                       "E8 ? ? ? ? 8B 56 14 49 8B CE E8 ? ? ? ? F3 0F 10", __fastcall, void, void*,
+                       int, short);
+REGISTER_GAME_FUNCTION(
+    PlayerItemsUpdateQuickSlotsWithUsedItem,
+    "85 D2 0F 84 ? ? ? ? 48 89 5C 24 10 57 48 83 EC 20 48 63 DA 48 8B F9 83 FB 70 0F 84",
+    __fastcall, void, PlayerItems*, int);
 
 static std::vector<std::string> displayNames;
 static uint32_t vanillaWeatherBound = 16;
@@ -1521,7 +1534,6 @@ class HotbarExpanded : public patch::BasePatch
         // not in a fully playable state yet.
         // This patch also takes control of Touch Controls positioning since with an expanded
         // hotbar, they'd overlap with the hotbar.
-        // TODO: Find remaining places where the hard limit of "< 4" is used
         // TODO: Add hot patching support so quicktools could be added and removed on the go
         // (3 would return UpdateTouchControlPositions to normal)
 
@@ -1530,25 +1542,94 @@ class HotbarExpanded : public patch::BasePatch
             pattern::InventoryMenuCreate, InventoryMenuCreate, &real::InventoryMenuCreate);
         real::AddTool = game.findMemoryPattern<AddTool_t>(pattern::AddTool);
 
-        // PlayerItems::Serialize
-        auto playerItemsSerializeAddr =
-            game.findMemoryPattern<uint8_t*>("41 B9 04 00 00 00 F3 0F 11 ? ? ? ? ? 41 0F B7 10");
-        utils::writeMemoryPattern(playerItemsSerializeAddr, "41 B9 08");
-
-        // PlayerItems::UpdateQuickTools
-        auto playerItemUpdateQuickToolsAddr =
-            game.findMemoryPattern<uint8_t*>("83 F9 04 7C E8 0F B7 47 34 66 89 47 32");
-        utils::writeMemoryPattern(playerItemUpdateQuickToolsAddr, "83 F9 08");
-
-        // PlayerItems::RemoveAnyIllegalQuickTools
-        auto playerItemRemoveIllegalTools =
-            game.findMemoryPattern<uint8_t*>("41 B9 04 00 00 00 45 33 DB F3 0F 11 ? ? ? ? ? 0F 1F "
-                                             "84 00 00 00 00 00 41 0F B7 10 66 85 D2");
-        utils::writeMemoryPattern(playerItemRemoveIllegalTools, "41 B9 08");
-
         game.hookFunctionPatternDirect<UpdateTouchControlPositions_t>(
             pattern::UpdateTouchControlPositions, UpdateTouchControlPositions,
             &real::UpdateTouchControlPositions);
+        game.hookFunctionPatternDirect<GameLogicComponentGetQuickToolInSlot_t>(
+            pattern::GameLogicComponentGetQuickToolInSlot, GameLogicComponentGetQuickToolInSlot,
+            &real::GameLogicComponentGetQuickToolInSlot);
+        game.hookFunctionPatternCall<PlayerItemsSetQuickSlotItem_t>(
+            pattern::PlayerItemsSetQuickSlotItem, PlayerItemsSetQuickSlotItem,
+            &real::PlayerItemsSetQuickSlotItem);
+        game.hookFunctionPatternDirect<PlayerItemsUpdateQuickSlotsWithUsedItem_t>(
+            pattern::PlayerItemsUpdateQuickSlotsWithUsedItem,
+            PlayerItemsUpdateQuickSlotsWithUsedItem,
+            &real::PlayerItemsUpdateQuickSlotsWithUsedItem);
+    }
+
+    static void __fastcall PlayerItemsUpdateQuickSlotsWithUsedItem(PlayerItems* pPlayerItems,
+                                                                   int itemID)
+    {
+        // Replicate vanilla client behaviour here.
+        if (itemID == 0 || itemID == 112 || itemID == 980 || itemID == 9186)
+            return;
+        if (itemID == 18 || itemID == 32)
+        {
+            pPlayerItems->m_quickSlots[0] = itemID;
+            return;
+        }
+        ItemInfo* pItem = &real::GetApp()->GetItemInfoManager()->m_items[itemID];
+        if (itemID != 6336 && pItem->category != 20 && pItem->category != 107 &&
+            pItem->category != 37 && pItem->category != 114 && pItem->category != 129 &&
+            pItem->category != 64)
+        {
+            int slot = -1;
+            for (int i = 0; i < 4; i++)
+            {
+                if (pPlayerItems->m_quickSlots[i] == itemID || m_extendedSlots[i] == itemID)
+                {
+                    slot = i;
+                    break;
+                }
+            }
+            if (slot == -1)
+            {
+                // Try find empty slots first on vanilla slots
+                for (int i = 0; i < 4; i++)
+                {
+                    if (pPlayerItems->m_quickSlots[i] == 0)
+                    {
+                        pPlayerItems->m_quickSlots[i] = itemID;
+                        return;
+                    }
+                }
+                // Try our custom slots instead
+                for (int i = 0; i < 4; i++)
+                {
+                    if (m_extendedSlots[i] == 0)
+                    {
+                        m_extendedSlots[i] = itemID;
+                        return;
+                    }
+                }
+                // Nothing was free, shift everything to make room
+                short moddedFirstItem = m_extendedSlots[0];
+                for (int i = 0; i < 3; i++)
+                    m_extendedSlots[i] = m_extendedSlots[i + 1];
+                for (int i = 1; i < 3; i++)
+                    pPlayerItems->m_quickSlots[i] = pPlayerItems->m_quickSlots[i + 1];
+                pPlayerItems->m_quickSlots[3] = moddedFirstItem;
+                m_extendedSlots[3] = itemID;
+            }
+        }
+    }
+
+    static void __fastcall PlayerItemsSetQuickSlotItem(void* pPlayerItems, int slot, short itemID)
+    {
+        if (slot < 4)
+            real::PlayerItemsSetQuickSlotItem(pPlayerItems, slot, itemID);
+        else if (slot < 9)
+            m_extendedSlots[slot - 4] = itemID;
+    }
+
+    static int __fastcall GameLogicComponentGetQuickToolInSlot(GameLogicComponent* pGameLogic,
+                                                               int slot)
+    {
+        if (slot < 4)
+            return real::GameLogicComponentGetQuickToolInSlot(pGameLogic, slot);
+        else if (slot < 9)
+            return m_extendedSlots[slot - 4];
+        return 0;
     }
 
     static void fixTouchButtonAlignment(Entity* pEnt, float yPos)
@@ -1597,6 +1678,21 @@ class HotbarExpanded : public patch::BasePatch
             fixTouchButtonAlignment(pTouchLeft, fNewY);
             fixTouchButtonAlignment(pTouchRight, fNewY);
             fixTouchButtonAlignment(pJumpWideButton, fNewY);
+
+            std::list<Entity*>* children = pTouchEnt->GetChildren();
+            for (auto it = children->begin(); it != children->end(); it++)
+            {
+                if ((*it)->GetComponentByName("TouchHandler"))
+                {
+                    (*it)->RemoveComponentByName("TouchHandler");
+                    (*it)->AddComponent(real::TouchHandlerComponent(operator new(0x120)));
+                }
+                else
+                {
+                    (*it)->RemoveComponentByName("TouchHandlerArcade");
+                    (*it)->AddComponent(real::TouchHandlerArcadeComponent(operator new(0x148)));
+                }
+            }
         }
     }
 
@@ -1632,5 +1728,9 @@ class HotbarExpanded : public patch::BasePatch
         for (int i = 4; i <= iToolsToAdd; i++)
             real::AddTool(i, pToolMenu);
     }
+
+  private:
+    static short m_extendedSlots[4];
 };
+short HotbarExpanded::m_extendedSlots[4] = {0, 0, 0, 0};
 REGISTER_USER_GAME_PATCH(HotbarExpanded, hotbar_expanded);

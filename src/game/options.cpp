@@ -86,7 +86,11 @@ REGISTER_GAME_FUNCTION(
     "48 89 4C 24 08 53 48 83 EC 50 48 C7 44 24 20 FE FF FF FF 48 8B D9 E8 ? ? ? ? 90 48 8D ? ? ? ? "
     "? 48 89 03 33 C9 48 89 8B 10 01 00 00 48 89 8B 08 01 00 00 48 C7 44 24 40 0F",
     __fastcall, EntityComponent*, void*);
-
+REGISTER_GAME_FUNCTION(
+    TouchHandlerArcadeComponent,
+    "48 89 4C 24 08 53 48 83 EC 50 48 C7 44 24 20 FE FF FF FF 48 8B D9 E8 ? ? ? ? 90 48 8D ? ? ? ? "
+    "? 48 89 03 33 C9 48 89 8B 18 01 00 00 48 89 8B 10 01 00 00",
+    __fastcall, EntityComponent*, void*);
 REGISTER_GAME_FUNCTION(FilterInputComponent,
                        "48 89 4C 24 08 53 48 83 EC 50 48 C7 44 24 20 FE FF FF FF 48 8B D9 E8 ? ? ? "
                        "? 90 48 8D ? ? ? ? ? 48 89 03 33 C9 48 89 8B D8 00 00 00 48 89 8B E0 00 00 "
@@ -174,6 +178,8 @@ void game::OptionsManager::initialize()
     real::SlideScreen = game.findMemoryPattern<SlideScreen_t>(pattern::SlideScreen);
     real::TouchHandlerComponent =
         game.findMemoryPattern<TouchHandlerComponent_t>(pattern::TouchHandlerComponent);
+    real::TouchHandlerArcadeComponent =
+        game.findMemoryPattern<TouchHandlerArcadeComponent_t>(pattern::TouchHandlerArcadeComponent);
     real::FilterInputComponent =
         game.findMemoryPattern<FilterInputComponent_t>(pattern::FilterInputComponent);
     real::ScrollScroll = game.findMemoryPattern<ScrollScroll_t>(pattern::ScrollScroll);
