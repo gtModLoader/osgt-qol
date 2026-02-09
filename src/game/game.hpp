@@ -397,6 +397,8 @@ class EventsAPI
     boost::signal<void(void*, __int64, __int64, __int64)> m_sig_onMapLoaded;
     boost::signal<void(void)> m_sig_postInitVideo;
 
+    int acquireKeycode();
+
   private:
     static void __thiscall ItemInfoManagerLoadFromMem(void* this_, char* pBytes, bool arg3);
     static void __fastcall OnArcadeInput(VariantList* pVL);
@@ -404,6 +406,8 @@ class EventsAPI
                                                            bool bKeyFired);
     static void __fastcall AddWASDKeys();
     static void __fastcall OnMapLoaded(void* this_, __int64 p1, __int64 p2, __int64 p3);
+
+    int m_lastKeycode;
 };
 
 } // namespace game

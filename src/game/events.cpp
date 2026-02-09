@@ -73,6 +73,13 @@ void game::EventsAPI::initialize()
         &real::ItemInfoManagerLoadFromMem);
     game.hookFunctionPatternDirect<OnMapLoaded_t>(pattern::OnMapLoaded, OnMapLoaded,
                                                   &real::OnMapLoaded);
+
+    m_lastKeycode = 600000;
+}
+
+int game::EventsAPI::acquireKeycode()
+{
+    return m_lastKeycode++;
 }
 
 void game::EventsAPI::ItemInfoManagerLoadFromMem(void* this_, char* pBytes, bool arg3)

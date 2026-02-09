@@ -59,13 +59,17 @@ class QuickbarHotkeys : public patch::BasePatch
         auto& events = game::EventsAPI::get();
         events.m_sig_netControllerInput.connect(&NetControllerLocalOnArcadeInput);
         events.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
+        m_toolSelect0 = events.acquireKeycode();
+        m_toolSelect1 = events.acquireKeycode();
+        m_toolSelect2 = events.acquireKeycode();
+        m_toolSelect3 = events.acquireKeycode();
     }
 
     static void __fastcall NetControllerLocalOnArcadeInput(void* this_, int keyCode, bool bKeyFired)
     {
         // Our custom mappings right now are just on keycode >= 600000
         // See AddCustomKeybinds function.
-        if (keyCode >= 600000 && keyCode <= 600003)
+        if (keyCode >= m_toolSelect0 && keyCode <= m_toolSelect3)
         {
             if (real::GetApp()->GetGameLogic()->IsDialogOpened())
                 return;
@@ -85,7 +89,7 @@ class QuickbarHotkeys : public patch::BasePatch
                 {
                     // When GameMenu is constructed, so is the inventory.
                     // We fake a "touch" event on a quickbar Tool to do the item switch cleanly.
-                    int ToolIndex = keyCode - 600000;
+                    int ToolIndex = keyCode - m_toolSelect0;
                     EntityComponent* pToolSelect =
                         pGameMenu->GetEntityByName("ItemsParent")
                             ->GetEntityByName("ToolSelectMenu")
@@ -101,16 +105,33 @@ class QuickbarHotkeys : public patch::BasePatch
     static void AddCustomKeybinds()
     {
         // Map our custom keybinds for switching between quickbar slots.
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect1", 49, 600001, 0, 0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect2", 50, 600002, 0, 0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect3", 51, 600003, 0, 0);
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect1", 49, m_toolSelect1, 0,
+                            0);
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect2", 50, m_toolSelect2, 0,
+                            0);
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_ToolSelect3", 51, m_toolSelect3, 0,
+                            0);
         // Also the numpad keys with 0 resetting to Fist/Wrench.
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect1", 96, 600000, 0, 0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect1", 97, 600001, 0, 0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect2", 98, 600002, 0, 0);
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect3", 99, 600003, 0, 0);
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect0", 96, m_toolSelect0,
+                            0, 0);
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect1", 97, m_toolSelect1,
+                            0, 0);
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect2", 98, m_toolSelect2,
+                            0, 0);
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_NmpToolSelect3", 99, m_toolSelect3,
+                            0, 0);
     }
+
+  private:
+    static int m_toolSelect0;
+    static int m_toolSelect1;
+    static int m_toolSelect2;
+    static int m_toolSelect3;
 };
+int QuickbarHotkeys::m_toolSelect0;
+int QuickbarHotkeys::m_toolSelect1;
+int QuickbarHotkeys::m_toolSelect2;
+int QuickbarHotkeys::m_toolSelect3;
 REGISTER_USER_GAME_PATCH(QuickbarHotkeys, quickbar_hotkey_patch);
 
 class QuickToggleSpaceToPunch : public patch::BasePatch
@@ -127,11 +148,12 @@ class QuickToggleSpaceToPunch : public patch::BasePatch
         auto& events = game::EventsAPI::get();
         events.m_sig_netControllerInput.connect(&NetControllerLocalOnArcadeInput);
         events.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
+        m_stpKeycode = events.acquireKeycode();
     }
 
     static void __fastcall NetControllerLocalOnArcadeInput(void* this_, int keyCode, bool bKeyFired)
     {
-        if (keyCode == 600004)
+        if (keyCode == m_stpKeycode)
         {
             if (real::GetApp()->GetGameLogic()->IsDialogOpened())
                 return;
@@ -155,9 +177,14 @@ class QuickToggleSpaceToPunch : public patch::BasePatch
     static void AddCustomKeybinds()
     {
         // CTRL+P
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_togglestp", 80, 600004, 1, 1);
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_togglestp", 80, m_stpKeycode, 1,
+                            1);
     }
+
+  private:
+    static int m_stpKeycode;
 };
+int QuickToggleSpaceToPunch::m_stpKeycode;
 REGISTER_USER_GAME_PATCH(QuickToggleSpaceToPunch, quick_toggle_space_to_punch);
 
 class FixURLButtons : public patch::BasePatch
@@ -245,6 +272,7 @@ class QuickDropPatch : public patch::BasePatch
         auto& events = game::EventsAPI::get();
         events.m_sig_netControllerInput.connect(&NetControllerLocalOnArcadeInput);
         events.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
+        m_keycode = events.acquireKeycode();
 
         real::OpenDropOptions =
             game::GameHarness::get().findMemoryPattern<OpenDropOptions_t>(pattern::OpenDropOptions);
@@ -263,7 +291,7 @@ class QuickDropPatch : public patch::BasePatch
             return;
         }
 
-        if (keyCode == 600006)
+        if (keyCode == m_keycode)
         {
             if (real::GetApp()->GetGameLogic()->IsDialogOpened())
             {
@@ -285,7 +313,7 @@ class QuickDropPatch : public patch::BasePatch
 
     static void AddCustomKeybinds()
     {
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_QuickDrop", 81, 600006, 0, 0);
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_QuickDrop", 81, m_keycode, 0, 0);
     }
 
     static void OnQuickDropToggledCallback(VariantList* pVariant)
@@ -298,6 +326,8 @@ class QuickDropPatch : public patch::BasePatch
 
   private:
     static bool m_isEnabled;
+    static int m_keycode;
 };
 bool QuickDropPatch::m_isEnabled = false;
+int QuickDropPatch::m_keycode;
 REGISTER_USER_GAME_PATCH(QuickDropPatch, quick_drop);

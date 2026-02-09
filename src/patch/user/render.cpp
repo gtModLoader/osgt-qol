@@ -505,6 +505,7 @@ class HideMyUI : public patch::BasePatch
         events.m_sig_onArcadeInput.connect(&OnArcadeInput);
         events.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
         events.m_sig_onMapLoaded.connect(&OnMapLoaded);
+        m_hideKey = events.acquireKeycode();
 
         // Make the opacity toggleable, default at 33%.
         Variant* pVariant = real::GetApp()->GetVar("hide_ui_opacity");
@@ -639,7 +640,7 @@ class HideMyUI : public patch::BasePatch
 
     static void __fastcall OnArcadeInput(VariantList* pVL)
     {
-        if (pVL->Get(0).GetUINT32() == 610001)
+        if (pVL->Get(0).GetUINT32() == m_hideKey)
         {
             if (real::GetApp()->GetGameLogic()->IsDialogOpened())
                 return;
@@ -681,9 +682,13 @@ class HideMyUI : public patch::BasePatch
     static void AddCustomKeybinds()
     {
         // Binds Ctrl+H key to hide UI
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_hideUI", 72, 610001, 1, 1);
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_hideUI", 72, m_hideKey, 1, 1);
     }
+
+  private:
+    static int m_hideKey;
 };
+int HideMyUI::m_hideKey;
 REGISTER_USER_GAME_PATCH(HideMyUI, hide_my_ui);
 
 class RemoveCheckboxPadding : public patch::BasePatch
@@ -1214,6 +1219,7 @@ class AnchorCameraToPlayerPatch : public patch::BasePatch
         auto& events = game::EventsAPI::get();
         events.m_sig_onArcadeInput.connect(&OnArcadeInput);
         events.m_sig_addWasdKeys.connect(&AddCustomKeybinds);
+        m_toggleKey = events.acquireKeycode();
     }
 
     // Option callbacks
@@ -1388,7 +1394,7 @@ class AnchorCameraToPlayerPatch : public patch::BasePatch
     {
         if (!m_hotkeyEnabled)
             return;
-        if (pVL->Get(0).GetUINT32() == 600007)
+        if (pVL->Get(0).GetUINT32() == m_toggleKey)
         {
             if (real::GetApp()->GetGameLogic()->IsDialogOpened())
                 return;
@@ -1403,15 +1409,17 @@ class AnchorCameraToPlayerPatch : public patch::BasePatch
     }
     static void AddCustomKeybinds()
     {
-        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_camera", 67, 600007, 1, 1);
+        real::AddKeyBinding(real::GetArcadeComponent(), "chatkey_camera", 67, m_toggleKey, 1, 1);
     }
 
   private:
     static bool m_centerCameraOnPlayer;
     static bool m_hotkeyEnabled;
+    static int m_toggleKey;
 };
 bool AnchorCameraToPlayerPatch::m_centerCameraOnPlayer = false;
 bool AnchorCameraToPlayerPatch::m_hotkeyEnabled = false;
+int AnchorCameraToPlayerPatch::m_toggleKey;
 REGISTER_USER_GAME_PATCH(AnchorCameraToPlayerPatch, anchor_camera_to_player);
 
 class SheetMusicAudioRenderSync : public patch::BasePatch
