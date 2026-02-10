@@ -1695,7 +1695,7 @@ class HotbarExpanded : public patch::BasePatch
                     }
                 }
                 // Try our custom slots instead
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < m_extraSlots; i++)
                 {
                     if (m_extendedSlots[i] == 0)
                     {
