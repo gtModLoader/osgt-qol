@@ -1,5 +1,12 @@
 #include "renderutils.hpp"
+#include "game/signatures.hpp"
 #include <cmath>
+
+float SinPulseByMS(int ms)
+{
+    int tick = real::GetApp()->m_gameTimer.m_timeMS % ms;
+    return (float)(sin((float(tick) / float(ms)) * 3.141592f * 2));
+}
 
 float SinPulseByCustomTimerMS(int ms, unsigned int timerMS)
 {

@@ -184,3 +184,14 @@ bool StringFromEndMatches(const std::string& line, const std::string textToMatch
 
     return false;
 }
+
+std::string GetFileExtension(std::string fileName)
+{
+	size_t index = fileName.find_last_of('.');
+	if (index == std::string::npos)
+	{
+		return "";
+	}
+
+	return fileName.substr(index+1, fileName.length());
+}

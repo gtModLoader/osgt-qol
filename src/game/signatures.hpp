@@ -38,6 +38,7 @@ DEFINE_GAME_FUNCTION(GetMessageManager, __fastcall, void*);
 DEFINE_GAME_FUNCTION(SetScrollProgressEntity, __fastcall, void, Entity*, CL_Vec2f*);
 // Declared in drawing.cpp
 DEFINE_GAME_FUNCTION(GetApp, __fastcall, App*);
+DEFINE_GAME_FUNCTION(AppGetSmartFileName, __fastcall, std::string*, App*, std::string& result, std::string& fName);
 DEFINE_GAME_FUNCTION(DrawFilledRect, __fastcall, void, const Rectf& rect, uint32_t rgba, float unk3, CL_Vec2f* unk4);
 DEFINE_GAME_FUNCTION(GetScreenRect, __fastcall, void, Rectf&);
 DEFINE_GAME_FUNCTION(SurfaceCtor, __thiscall, void*, void*);
@@ -45,6 +46,7 @@ DEFINE_GAME_FUNCTION(SurfaceDtor, __thiscall, void, void*);
 DEFINE_GAME_FUNCTION(SurfaceLoadFile, __fastcall, bool, void*, std::string, bool);
 DEFINE_GAME_FUNCTION(SurfaceBlitScaled, __fastcall, void, void* pSurf, float x, float y, CL_Vec2f& vScale,
                      int alignment, unsigned int rgba, float rotation, void* pRenderBatcher, bool flipX, bool flipY);
+DEFINE_GAME_FUNCTION(SurfaceKill, __fastcall, void, void*);
 DEFINE_GAME_FUNCTION(SurfaceAnimCtor, __thiscall, void*, void*);
 DEFINE_GAME_FUNCTION(SurfaceAnimDtor, __thiscall, void, void*);
 DEFINE_GAME_FUNCTION(SurfaceAnimBlitScaledAnim, __thiscall, void, void* pAnimSurf, float x, float y, int frameX,
@@ -69,7 +71,7 @@ DEFINE_GAME_FUNCTION(EntitySetScaleBySize, __fastcall, void, Entity*, CL_Vec2f&,
 DEFINE_GAME_FUNCTION(SendPacket, __fastcall, void, int, std::string, void*);
 DEFINE_GAME_FUNCTION(GetAudioManager, __fastcall, AudioManagerFMOD*);
 DEFINE_GAME_FUNCTION(GetDevicePixelsPerInchDiagonal, __fastcall, int);
-DEFINE_GAME_FUNCTION(LogToConsole, __fastcall, void, const char*);
+DEFINE_GAME_FUNCTION(LogToConsole, __fastcall, void, const char*, ...);
 DEFINE_GAME_FUNCTION(RenderBatcherFlush, __fastcall, void, void*, unsigned int, int64_t);
 DEFINE_GAME_GLOBAL_VAR(g_globalBatcher, void*);
 // Declared in events.cpp

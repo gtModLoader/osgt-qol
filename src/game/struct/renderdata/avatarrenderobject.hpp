@@ -17,7 +17,6 @@ class AvatarRenderObject
 {
   public:
     AvatarRenderObject();
-    // vftable incomplete.
     // V3.02 has 43 vfunctions for AVROs.
     virtual ~AvatarRenderObject(){};
     virtual void Init() {};
@@ -107,3 +106,43 @@ class AvatarRenderObject
     int clothingParticleType;
 };
 static_assert(sizeof(AvatarRenderObject) == 152, "AvatarRenderObject class size mismatch.");
+
+// Namings matched. Implementation incomplete.
+class GenericAvatarRenderObject : public AvatarRenderObject
+{
+  public:
+    // GenericAvatarRenderObject overrides VF #2, #3, #13, #14, #15, #20, #21, #22, #23, #24, #25, #27, #35 and adds
+    // #44.
+    virtual void Init();
+    virtual void Update();
+    virtual void RenderBackpack(float cx, float cy, int itemID, unsigned int tint, bool faceLeft);
+    virtual void RenderFrontpack(float cx, float cy, int itemID, unsigned int tint, bool faceLeft);
+    virtual void RenderBackArm(float cx, float cy, int tint, int otherTint, int itemID, float angle, bool faceLeft);
+    virtual void RenderPants(float cx, float cy, int itemID, int otherTint, int forceColor, bool faceLeft, int horsey);
+    virtual void RenderShirt(float cx, float cy, int itemID, int skinTint, int otherTint, bool faceLeft);
+    virtual void RenderChestItem(float cx, float cy, int itemID, int otherTint, bool faceLeft, bool topHalfOnly,
+                                 bool backSide);
+    virtual void RenderFaceItem(float cx, float cy, int itemID, int otherTint, bool faceLeft);
+    virtual void RenderHair(float cx, float cy, int itemID, int otherTint, bool faceLeft);
+    virtual void RenderHat(float cx, float cy, int itemID, int otherTint, bool faceLeft);
+    virtual void RenderFrontArm(float cx, float cy, float arm2Angle, int itemID, int skinTint, int othertint,
+                                bool faceLeft, int forceColor);
+    virtual void SwitchOffClothingParticles(AvatarRenderData* pAvatarRenderData);
+    virtual void SetAnimFrames(std::string* frames) {};
+
+    void RenderBackpackBySpecifiedFrame(float cx, float cy, int itemID, unsigned int tint, bool faceLeft, int frameX,
+                                        int frameY);
+
+    std::vector<CL_Vec2i> m_animFrames;
+    std::vector<CL_Vec2i> m_anim2Frames;
+    int m_currentFrame;
+    int m_currentFrame2;
+    int m_animLength;
+    CL_Vec2f m_offset;
+    unsigned int m_fxFlags;
+    unsigned int m_tint1;
+    unsigned int m_tint2;
+    int m_animRateMS;
+    bool m_bReverseAnim;
+};
+static_assert(sizeof(GenericAvatarRenderObject) == 240, "GenericAvatarRenderObject class size mismatch.");

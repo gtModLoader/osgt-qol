@@ -30,8 +30,8 @@ class Surface
         BLENDING_DARKEN
     };
     Surface();
-    ~Surface();
-    void* vftable;
+    virtual ~Surface();
+    //void* vftable;
     void* sig_pad1;
     void* sig_pad2;
     void* sig_pad3;
@@ -44,6 +44,7 @@ class Surface
     void SetBlendingMode(eBlendingMode blendMode) { m_blendingMode = blendMode; }
     int GetWidth() { return m_originalWidth; }
     int GetHeight() { return m_originalHeight; }
+    void Kill();
 
     enum eTextureCreationMethod
     {

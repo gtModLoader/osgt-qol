@@ -54,5 +54,6 @@ inline uint32_t ColorCombine(uint32_t c1, uint32_t c2, float alphaMod)
 
     return MAKE_RGBA(r, g, b, uint8_t(float(a) * alphaMod));
 }
+float SinPulseByMS(int ms);
 float SinPulseByCustomTimerMS(int ms, unsigned int timerMS);
 void HSVToRGB(float h, float s, float v, int* r, int* g, int* b);

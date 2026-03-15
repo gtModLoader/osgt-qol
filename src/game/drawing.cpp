@@ -9,7 +9,9 @@
 #include <debugapi.h>
 
 REGISTER_GAME_FUNCTION(GetApp, "44 0F 28 F8 E8 ? ? ? ? 48 8B C8 48 8D", __fastcall, App*);
-
+REGISTER_GAME_FUNCTION(AppGetSmartFileName,
+                       "40 55 56 57 41 56 41 57 48 8D 6C 24 D0 48 81 EC 30 01 00 00 48 C7 44 24 30 FE FF FF FF",
+                       __fastcall, std::string*, App*, std::string& result, std::string& fName);
 // DrawFilledRect
 REGISTER_GAME_FUNCTION(DrawFilledRect, "48 83 EC 58 F3 41 0F 10 01 48 8D 44 24 40 F3 41 0F 10 49 04 0F", __fastcall,
                        void, const Rectf& rect, uint32_t rgba, float unk3, CL_Vec2f* unk4);
@@ -34,6 +36,10 @@ REGISTER_GAME_FUNCTION(SurfaceLoadFile,
                        "40 57 48 83 EC 50 48 C7 44 24 30 FE FF FF FF 48 89 5C 24 70 48 8B 05 65 75 "
                        "4B 00 48 33 C4 48 89 44 24 40 48 8B FA",
                        __fastcall, bool, void*, std::string, bool);
+
+// Surface::Kill
+REGISTER_GAME_FUNCTION(SurfaceKill, "48 89 5C 24 08 57 48 83 EC 20 BB FF FF 00 00 48 8B F9 66 3B 59 20", __fastcall,
+                       void, void*);
 
 // Surface::BlitScaled
 REGISTER_GAME_FUNCTION(SurfaceBlitScaled, "48 81 EC 88 00 00 00 F3 41 0F 10 01 0F B6 84 24 D8 00 00 00 F3 41 0F",
@@ -121,7 +127,7 @@ REGISTER_GAME_FUNCTION(GetDevicePixelsPerInchDiagonal,
 REGISTER_GAME_FUNCTION(LogToConsole,
                        "48 89 4C 24 08 48 89 54 24 10 4C 89 44 24 18 4C 89 4C 24 20 53 57 B8 88 10 "
                        "00 00 ? ? ? ? ? 48 2B E0 48 8B 05 86 E4 2D",
-                       __fastcall, void, const char*);
+                       __fastcall, void, const char*, ...);
 REGISTER_GAME_GLOBAL_VAR(g_globalBatcher,
                          "48 8D ? ? ? ? ? E8 ? ? ? ? 90 4C 8D ? ? ? ? ? BA 48 00 00 00 44 8D 42 BE 48 8D 4D C0", void*);
 REGISTER_GAME_FUNCTION(RenderBatcherFlush, "40 53 56 41 56 41 57 48 81 EC D8 00 00 00", __fastcall, void, void*,
@@ -131,6 +137,7 @@ namespace game
 void GameHarness::resolveSharedSigs()
 {
     real::GetApp = utils::resolveRelativeCall<GetApp_t>(findMemoryPattern<uint8_t*>(pattern::GetApp) + 4);
+    real::AppGetSmartFileName = findMemoryPattern<AppGetSmartFileName_t>(pattern::AppGetSmartFileName);
     real::GetScreenRect = findMemoryPattern<GetScreenRect_t>(pattern::GetScreenRect);
     real::SetupTextEntity = findMemoryPattern<SetupTextEntity_t>(pattern::SetupTextEntity);
     real::CreateOverlayEntity = findMemoryPattern<CreateOverlayEntity_t>(pattern::CreateOverlayEntity);
@@ -142,6 +149,7 @@ void GameHarness::resolveSharedSigs()
     real::SurfaceCtor = findMemoryPattern<SurfaceCtor_t>(pattern::SurfaceCtor);
     real::SurfaceDtor = findMemoryPattern<SurfaceDtor_t>(pattern::SurfaceDtor);
     real::SurfaceLoadFile = findMemoryPattern<SurfaceLoadFile_t>(pattern::SurfaceLoadFile);
+    real::SurfaceKill = findMemoryPattern<SurfaceKill_t>(pattern::SurfaceKill);
     real::SurfaceAnimBlitScaledAnim =
         findMemoryPattern<SurfaceAnimBlitScaledAnim_t>(pattern::SurfaceAnimBlitScaledAnim);
     real::SurfaceBlitScaled = findMemoryPattern<SurfaceBlitScaled_t>(pattern::SurfaceBlitScaled);

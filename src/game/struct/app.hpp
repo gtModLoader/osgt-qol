@@ -2,6 +2,7 @@
 #include "baseapp.hpp"
 #include "enetclient.hpp"
 #include "iteminfomanager.hpp"
+#include "tilesheetmanager.hpp"
 #include "variantdb.hpp"
 
 
@@ -23,7 +24,7 @@ class App : public BaseApp
     virtual void LoadVarDB();
     GameLogicComponent* GetGameLogic() { return m_pGameLogic; }
     ItemInfoManager* GetItemInfoManager() { return &m_itemInfoManager; }
-    void* GetTileSheetManager() { return &m_tileSheetManager; }
+    TileSheetManager* GetTileSheetManager() { return &m_tileSheetManager; }
     void* GetAdManager() { return &m_adManager; }
     void* GetIAPManager() { return &m_iapManager; }
     void* GetAudioCache() { return &m_audioCache; }
@@ -34,7 +35,7 @@ class App : public BaseApp
     GameLogicComponent* m_pGameLogic;
     void* m_pTrackHandler; // TrackHandlerComponent*
     ItemInfoManager m_itemInfoManager;
-    uint8_t m_tileSheetManager[32];
+    TileSheetManager m_tileSheetManager;
     uint8_t m_adManager[288];
     void* m_pUnk;
     uint8_t m_iapManager[416];

@@ -10,3 +10,5 @@ std::vector<std::string> StringTokenize(const std::string& theString, const std:
 std::vector<std::wstring> StringTokenize(const std::wstring& theString, const std::wstring& theDelimiter);
 bool StringFromStartMatches(const std::string& line, const std::string textToMatch);
 bool StringFromEndMatches(const std::string& line, const std::string textToMatch);
+
+std::string GetFileExtension(std::string fileName);

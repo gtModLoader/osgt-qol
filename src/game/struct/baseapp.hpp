@@ -1,6 +1,7 @@
 #pragma once
 #include "entity.hpp"
 #include "gametimer.hpp"
+#include "resourcemanager.hpp"
 #include "rtfont.hpp"
 #include <cstdint>
 #include <mutex>
@@ -67,7 +68,7 @@ class BaseApp
     uint8_t m_OSMessages[40]; // A deque with <OSMessage>
     bool m_bManualRotation;
     uint8_t padding2[7];
-    uint8_t m_resourceManager[24];
+    ResourceManager m_resourceManager;
     int m_inputMode;
     int m_memUsed;
     int m_texMemUsed;

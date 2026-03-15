@@ -32,3 +32,8 @@ void SurfaceAnim::BlitScaledAnim(float x, float y, int frameX, int frameY, CL_Ve
     real::SurfaceAnimBlitScaledAnim(this, x, y, frameX, frameY, vScale, alignment, rgba, rotation, &vRotationPt, flipX,
                                     flipY, pBatcher, padding);
 }
+
+void Surface::Kill()
+{
+    real::SurfaceKill(this);
+}
