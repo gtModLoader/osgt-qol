@@ -31,6 +31,16 @@ class NetMoving : public NetBase
     bool m_bFacingLeft;
     float _moveX;
     float _moveY;
+
+    Rectf GetCollisionRectWorld()
+    {
+        Rectf res;
+        res.left = m_vPos.x;
+        res.top = m_vPos.y;
+        res.right = m_vPos.x + m_vSize.x;
+        res.bottom = m_vPos.y + m_vSize.y;
+        return res;
+    }
 };
 static_assert(sizeof(NetMoving) == 320, "NetMoving class size mismatch.");
 
@@ -50,7 +60,7 @@ struct GuildClientModel
 };
 
 class SurfaceAnim;
-class Tile;
+struct Tile;
 
 // Needs to be verified, should be 90% it though.
 class NetAvatar : public NetMoving

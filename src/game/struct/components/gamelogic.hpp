@@ -2,6 +2,7 @@
 #include "game/struct/battlestatus.hpp"
 #include "game/struct/component.hpp"
 #include "game/struct/playeritems.hpp"
+#include "game/struct/textmanager.hpp"
 #include "game/struct/world/world.hpp"
 #include "game/struct/world/worldrenderer.hpp"
 
@@ -46,7 +47,7 @@ class GameLogicComponent : public EntityComponent
     uint8_t m_netObjManager[48];
     int m_fakeNetID;
     NetAvatar* m_pLocalPlayer; // NetAvatar*
-    uint8_t m_textManager[40];
+    TextManager m_textManager;
     PlayerItems m_playerItems;
     int m_activeItemID;
     bool m_bHasGrowID;
