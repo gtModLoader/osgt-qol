@@ -219,12 +219,11 @@ REGISTER_GAME_FUNCTION(
     "48 8B C4 55 41 54 41 55 41 56 41 57 48 8D A8 28 FE FF FF 48 81 EC B0 02 00 00 48 C7 44 24 78 FE FF FF FF",
     __fastcall, void, NetAvatar*);
 REGISTER_GAME_GLOBAL_VAR(g_fireBatcher, "48 8D ? ? ? ? ? 33 D2 E8 ? ? ? ? EB 07 4C 8D", void*);
-REGISTER_GAME_FUNCTION(
-    GetInventoryInfoScale,
-    "48 83 EC 48 0F 29 74 24 30 F3 0F 10 ? ? ? ? ? 0F 29 7C 24 20 E8 ? ? ? ? F3 0F 10", __fastcall,
-    float);
-REGISTER_GAME_FUNCTION(AddMenuButton, "48 8B C4 55 53 56 57 41 54 41 56 41 57 48 8D 6C 24 90",
-                       __fastcall, void, std::string, std::string, uint32_t, Entity*);
+REGISTER_GAME_FUNCTION(GetInventoryInfoScale,
+                       "48 83 EC 48 0F 29 74 24 30 F3 0F 10 ? ? ? ? ? 0F 29 7C 24 20 E8 ? ? ? ? F3 0F 10", __fastcall,
+                       float);
+REGISTER_GAME_FUNCTION(AddMenuButton, "48 8B C4 55 53 56 57 41 54 41 56 41 57 48 8D 6C 24 90", __fastcall, void,
+                       std::string, std::string, uint32_t, Entity*);
 REGISTER_GAME_FUNCTION(TradeMenuInit,
                        "48 8B C4 55 56 57 41 54 41 55 41 56 41 57 48 8D A8 58 FD FF FF 48 81 EC 70 "
                        "03 00 00 48 C7 45 20 FE FF FF FF",
@@ -1469,12 +1468,10 @@ class HighResolutionInventoryScaling : public patch::BasePatch
         // Inventory crashes the game.
         // KNOWN BUG: Resized inventory when switching resolutions will mess up the trade menus.
         auto& game = game::GameHarness::get();
-        game.hookFunctionPatternDirect<GetInventoryInfoScale_t>(
-            pattern::GetInventoryInfoScale, GetInventoryInfoScale, &real::GetInventoryInfoScale);
-        game.hookFunctionPatternDirect<AddMenuButton_t>(pattern::AddMenuButton, AddMenuButton,
-                                                        &real::AddMenuButton);
-        game.hookFunctionPatternDirect<TradeMenuInit_t>(pattern::TradeMenuInit, TradeMenuInit,
-                                                        &real::TradeMenuInit);
+        game.hookFunctionPatternDirect<GetInventoryInfoScale_t>(pattern::GetInventoryInfoScale, GetInventoryInfoScale,
+                                                                &real::GetInventoryInfoScale);
+        game.hookFunctionPatternDirect<AddMenuButton_t>(pattern::AddMenuButton, AddMenuButton, &real::AddMenuButton);
+        game.hookFunctionPatternDirect<TradeMenuInit_t>(pattern::TradeMenuInit, TradeMenuInit, &real::TradeMenuInit);
 
         Variant* pVariant = real::GetApp()->GetVar("osgt_qol_hidpi_invscale");
         if (pVariant->GetType() != Variant::TYPE_FLOAT)
@@ -1483,9 +1480,9 @@ class HighResolutionInventoryScaling : public patch::BasePatch
             g_invScale = pVariant->GetFloat();
 
         auto& optionsMgr = game::OptionsManager::get();
-        optionsMgr.addSliderOption("qol", "UI", "osgt_qol_hidpi_invscale",
-                                   "High-DPI Inventory Scaling",
-                                   &HighDPIInventoryScalingCallback, "`5(requires world re-enter, effective on 1080p and higher resolution)``");
+        optionsMgr.addSliderOption("qol", "UI", "osgt_qol_hidpi_invscale", "High-DPI Inventory Scaling",
+                                   &HighDPIInventoryScalingCallback,
+                                   "`5(requires world re-enter, effective on 1080p and higher resolution)``");
     }
 
     static void HighDPIInventoryScalingCallback(Variant* pVariant)
@@ -1501,7 +1498,7 @@ class HighResolutionInventoryScaling : public patch::BasePatch
         if (!g_usingScaledInventory)
             return;
 
-        Entity* pTradeGUI =  pTradeMenu->m_pTradeGUI;
+        Entity* pTradeGUI = pTradeMenu->m_pTradeGUI;
         if (pTradeGUI != nullptr)
         {
             std::vector<Entity*> rects;
@@ -1539,8 +1536,8 @@ class HighResolutionInventoryScaling : public patch::BasePatch
             // Get amount of dead space in the trade window so we can try center the tools.
             std::vector<Entity*> tools;
             rects.front()->GetEntitiesByName(&tools, "Tool");
-            float finalToolX = (tools.back()->GetVar("pos2d")->GetVector2().x +
-                                tools.back()->GetVar("size2d")->GetVector2().x);
+            float finalToolX =
+                (tools.back()->GetVar("pos2d")->GetVector2().x + tools.back()->GetVar("size2d")->GetVector2().x);
             float deadSpaceX = vSize.x - finalToolX;
             float toMoveX = deadSpaceX / 4.0f;
 
@@ -1604,8 +1601,8 @@ class HighResolutionInventoryScaling : public patch::BasePatch
         }
     }
 
-    static void __fastcall AddMenuButton(std::string buttonID, std::string buttonText,
-                                         uint32_t nthButton, Entity* pParentEnt)
+    static void __fastcall AddMenuButton(std::string buttonID, std::string buttonText, uint32_t nthButton,
+                                         Entity* pParentEnt)
     {
         real::AddMenuButton(buttonID, buttonText, nthButton, pParentEnt);
 
@@ -1684,7 +1681,6 @@ class HighResolutionInventoryScaling : public patch::BasePatch
 };
 REGISTER_USER_GAME_PATCH(HighResolutionInventoryScaling, high_res_inventory_scaling);
 
-
 class SheetMusicAudioRenderSync : public patch::BasePatch
 {
   public:
@@ -1702,6 +1698,7 @@ class SheetMusicAudioRenderSync : public patch::BasePatch
         // We'll reset the flags used here.
         m_finishedPlaying = true;
         m_snapbackIdx = -1;
+        m_tileWidth = real::GetApp()->GetGameLogic()->GetTileWidth();
     }
     static void __fastcall WorldRendererAdvanceSong(WorldRenderer* this_)
     {
@@ -1728,12 +1725,20 @@ class SheetMusicAudioRenderSync : public patch::BasePatch
             this_->m_songPosition = m_snapbackIdx;
             m_snapbackIdx = -1;
         }
-        this_->m_songPosition++;
+        // Increment by 13 rows if we're at the end of a row.
+        if ((this_->m_songPosition + 1) % (m_tileWidth * 14) >= m_tileWidth)
+            this_->m_songPosition += m_tileWidth * 13 + 1;
+        else
+            this_->m_songPosition++;
         // Save current coordinate. The AdvanceSong function increments music coordinate or resets
         // it to start, if we see a sudden jump back to start, we know the song has finished.
         int curCoord = this_->m_songPosition;
         real::WorldRendererAdvanceSong(this_);
-        this_->m_songPosition--;
+        // Skip back by 13 rows if we're at the start.
+        if (this_->m_songPosition % (m_tileWidth * 14) == 0)
+            this_->m_songPosition -= ((m_tileWidth * 13) + 1);
+        else
+            this_->m_songPosition--;
         if (this_->m_songPosition <= this_->m_songStart && curCoord >= this_->m_songEnd)
         {
             this_->m_songPosition = this_->m_songEnd;
@@ -1754,9 +1759,11 @@ class SheetMusicAudioRenderSync : public patch::BasePatch
   private:
     static bool m_finishedPlaying;
     static int m_snapbackIdx;
+    static int m_tileWidth;
 };
 bool SheetMusicAudioRenderSync::m_finishedPlaying = true;
 int SheetMusicAudioRenderSync::m_snapbackIdx = -1;
+int SheetMusicAudioRenderSync::m_tileWidth = 100;
 REGISTER_USER_GAME_PATCH(SheetMusicAudioRenderSync, sheet_music_audio_render_sync);
 
 class HotbarExpanded : public patch::BasePatch
