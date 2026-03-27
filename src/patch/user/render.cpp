@@ -1484,8 +1484,8 @@ class HighResolutionInventoryScaling : public patch::BasePatch
 
         auto& optionsMgr = game::OptionsManager::get();
         optionsMgr.addSliderOption("qol", "UI", "osgt_qol_hidpi_invscale",
-                                   "High-DPI Inventory Scaling `5(requires world re-enter)``",
-                                   &HighDPIInventoryScalingCallback);
+                                   "High-DPI Inventory Scaling",
+                                   &HighDPIInventoryScalingCallback, "`5(requires world re-enter, effective on 1080p and higher resolution)``");
     }
 
     static void HighDPIInventoryScalingCallback(Variant* pVariant)
@@ -1673,7 +1673,8 @@ class HighResolutionInventoryScaling : public patch::BasePatch
         Rectf screenRect;
         real::GetScreenRect(screenRect);
         // For under 1080p, lets just keep using original calculation.
-        if (screenRect.right < 1920)
+        g_usingScaledInventory = false;
+        if (screenRect.right < 1920 || g_invScale >= 0.99f)
             return real::GetInventoryInfoScale();
 
         g_usingScaledInventory = true;
