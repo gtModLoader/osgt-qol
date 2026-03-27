@@ -66,6 +66,7 @@ User-facing, most notable/impactful patches:
 - Dialog Walking - You can move while having a dialog open again
 - Resizeable Hotbar - Allows you to resize the quick tools hotbar to be up to 10 slots instead of the vanilla 4
 - Buildomatica - Allows you to overlay World Planner files in-game as schematics you can follow. To use, create a folder called "schematics" in your game folder and drop your .GMSF, .gtworld and/or .GMSF files there.
+- Double Jump State Fixer - Fixes annoying design decision where if any state change happened on your player (e.g. got Stinky mod) would nullify your currently available double jump.
 
 User-facing, visible or impactful patches:
 - Legacy Chat patch - Removes the chat update paddings, chat tabs and `[S]` symbols

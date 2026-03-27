@@ -109,3 +109,9 @@ Allows the hotbar to be resized
 
 Re-allows walking when in dialogs
 +allow_dialog_input
+
+See README for more info on how to use Buildomatica and what it offers
++buildomatica
+
+Fixes annoying design decision where if any state change happened on your player (e.g. got Stinky mod) would nullify your currently available double jump.
++double_jump_state_fixer
