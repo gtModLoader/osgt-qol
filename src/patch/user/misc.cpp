@@ -96,7 +96,8 @@ class SkipStoreConfirm : public patch::BasePatch
     {
         // This patch skips the server confirmation screen ("Please wait...") when buying packs from the gem store. This
         // negates low-ping advantage when buying bulk packs at expense of not seeing what you bought in the GUI.
-        // You still have to click both "Buy" and "Confirm", it just won't wait for the server side confirmation anymore.
+        // You still have to click both "Buy" and "Confirm", it just won't wait for the server side confirmation
+        // anymore.
         auto& game = game::GameHarness::get();
         game.hookFunctionPatternDirect<OnStoreBuyConfirm_t>(pattern::OnStoreBuyConfirm, OnStoreBuyConfirm,
                                                             &real::OnStoreBuyConfirm);
@@ -119,6 +120,7 @@ class SkipStoreConfirm : public patch::BasePatch
         Entity* pCheckbox = pVariant->Get(1).GetEntity();
         bool bChecked = pCheckbox->GetVar("checked")->GetUINT32() != 0;
         real::GetApp()->GetVar("osgt_qol_skip_store_confirm")->Set(uint32_t(bChecked));
+        m_bSkipConfirm = bChecked;
     }
 
     static void OnStoreBuyConfirm()
