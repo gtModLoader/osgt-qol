@@ -8,6 +8,14 @@
 REGISTER_GAME_FUNCTION(NetAvatarSetCharacterState,
                        "40 57 48 83 EC 40 8B 42 14 48 8B F9 89 81 50 02 00 00 8B 42 0C 48 89 74 24 58", __fastcall,
                        void, NetAvatar*, GameUpdatePacket*);
+REGISTER_GAME_FUNCTION(
+    OnStoreBuyConfirm,
+    "48 8B C4 55 41 56 41 57 48 8D 68 88 48 81 EC 60 01 00 00 48 C7 44 24 38 FE FF FF FF 48 89 58 08", __fastcall,
+    void);
+REGISTER_GAME_FUNCTION(GetChosenStoreItemEntity,
+                       "40 57 48 83 EC 50 48 C7 44 24 20 FE FF FF FF 48 89 5C 24 60 48 8B ? ? ? ? ? 48 33 C4 48 89 44 "
+                       "24 48 48 83 3D ? ? ? ? ? 75 0E",
+                       __fastcall, Entity*);
 
 static uint8_t* createAccSecurityAddr;
 class PauseMenuNoAAP : public patch::BasePatch
@@ -80,3 +88,53 @@ class DoubleJumpStateFixer : public patch::BasePatch
     }
 };
 REGISTER_USER_GAME_PATCH(DoubleJumpStateFixer, double_jump_state_fixer);
+
+class SkipStoreConfirm : public patch::BasePatch
+{
+  public:
+    void apply() const override
+    {
+        // This patch skips the server confirmation screen ("Please wait...") when buying packs from the gem store. This
+        // negates low-ping advantage when buying bulk packs at expense of not seeing what you bought in the GUI.
+        // You still have to click both "Buy" and "Confirm", it just won't wait for the server side confirmation anymore.
+        auto& game = game::GameHarness::get();
+        game.hookFunctionPatternDirect<OnStoreBuyConfirm_t>(pattern::OnStoreBuyConfirm, OnStoreBuyConfirm,
+                                                            &real::OnStoreBuyConfirm);
+        real::GetChosenStoreItemEntity =
+            game::GameHarness::get().findMemoryPattern<GetChosenStoreItemEntity_t>(pattern::GetChosenStoreItemEntity);
+
+        // Default it to disabled.
+        Variant* pVariant = real::GetApp()->GetVar("osgt_qol_skip_store_confirm");
+        if (pVariant->GetType() == Variant::TYPE_UNUSED)
+            pVariant->Set(0U);
+        m_bSkipConfirm = pVariant->GetUINT32() == 1;
+
+        auto& optionsMgr = game::OptionsManager::get();
+        optionsMgr.addCheckboxOption("qol", "Input", "osgt_qol_skip_store_confirm",
+                                     "Skip store purchase confirmation for packs", &OnCheckboxCallback);
+    }
+
+    static void OnCheckboxCallback(VariantList* pVariant)
+    {
+        Entity* pCheckbox = pVariant->Get(1).GetEntity();
+        bool bChecked = pCheckbox->GetVar("checked")->GetUINT32() != 0;
+        real::GetApp()->GetVar("osgt_qol_skip_store_confirm")->Set(uint32_t(bChecked));
+    }
+
+    static void OnStoreBuyConfirm()
+    {
+        if (real::GetApp()->m_serverProtocol >= 92 || !m_bSkipConfirm)
+        {
+            real::OnStoreBuyConfirm();
+            return;
+        }
+        Entity* pChosen = real::GetChosenStoreItemEntity();
+        if (pChosen)
+            real::SendPacket(2, "action|buy\nitem|" + pChosen->GetName(), real::GetApp()->m_pClient->m_pEnetPeer);
+    }
+
+  private:
+    static bool m_bSkipConfirm;
+};
+bool SkipStoreConfirm::m_bSkipConfirm = false;
+REGISTER_USER_GAME_PATCH(SkipStoreConfirm, skip_store_confirm);

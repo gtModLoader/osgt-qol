@@ -67,6 +67,7 @@ User-facing, most notable/impactful patches:
 - Resizeable Hotbar - Allows you to resize the quick tools hotbar to be up to 10 slots instead of the vanilla 4
 - Buildomatica - Allows you to overlay World Planner files in-game as schematics you can follow. To use, create a folder called "schematics" in your game folder and drop your .GMSF, .gtworld and/or .GMSF files there.
 - Double Jump State Fixer - Fixes annoying design decision where if any state change happened on your player (e.g. got Stinky mod) would nullify your currently available double jump.
+- Skip Store Confirm - Skips the "Please wait..." screen when buying packs if enabled, this is a must-have if you are buying in bulk and have high ping to the server as it negates the ping advantage lower ping players have.
 
 User-facing, visible or impactful patches:
 - Legacy Chat patch - Removes the chat update paddings, chat tabs and `[S]` symbols
