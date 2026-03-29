@@ -1697,7 +1697,7 @@ class SheetMusicAudioRenderSync : public patch::BasePatch
     {
         // We'll reset the flags used here.
         m_finishedPlaying = true;
-        m_snapbackIdx = -1;
+        m_snapbackIdx = -2;
         m_tileWidth = real::GetApp()->GetGameLogic()->GetTileWidth();
     }
     static void __fastcall WorldRendererAdvanceSong(WorldRenderer* this_)
@@ -1708,7 +1708,7 @@ class SheetMusicAudioRenderSync : public patch::BasePatch
             if (!m_finishedPlaying)
             {
                 m_finishedPlaying = true;
-                m_snapbackIdx = -1;
+                m_snapbackIdx = -2;
             }
             return;
         }
@@ -1717,13 +1717,13 @@ class SheetMusicAudioRenderSync : public patch::BasePatch
         {
             this_->m_songPosition = this_->m_songStart - 1;
             m_finishedPlaying = false;
-            m_snapbackIdx = -1;
+            m_snapbackIdx = -2;
         }
-        else if (m_snapbackIdx != -1)
+        else if (m_snapbackIdx != -2)
         {
             // Repeats will snap the playing coord back, we'll have to track that as well.
             this_->m_songPosition = m_snapbackIdx;
-            m_snapbackIdx = -1;
+            m_snapbackIdx = -2;
         }
         // Increment by 13 rows if we're at the end of a row.
         if ((this_->m_songPosition + 1) % (m_tileWidth * 14) >= m_tileWidth)
@@ -1735,7 +1735,7 @@ class SheetMusicAudioRenderSync : public patch::BasePatch
         int curCoord = this_->m_songPosition;
         real::WorldRendererAdvanceSong(this_);
         // Skip back by 13 rows if we're at the start.
-        if (this_->m_songPosition % (m_tileWidth * 14) == 0)
+        if (this_->m_songPosition % (m_tileWidth * 14) == 0 && this_->m_songPosition != 0)
             this_->m_songPosition -= ((m_tileWidth * 13) + 1);
         else
             this_->m_songPosition--;
@@ -1762,7 +1762,7 @@ class SheetMusicAudioRenderSync : public patch::BasePatch
     static int m_tileWidth;
 };
 bool SheetMusicAudioRenderSync::m_finishedPlaying = true;
-int SheetMusicAudioRenderSync::m_snapbackIdx = -1;
+int SheetMusicAudioRenderSync::m_snapbackIdx = -2;
 int SheetMusicAudioRenderSync::m_tileWidth = 100;
 REGISTER_USER_GAME_PATCH(SheetMusicAudioRenderSync, sheet_music_audio_render_sync);
 
