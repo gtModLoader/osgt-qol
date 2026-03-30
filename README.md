@@ -93,6 +93,7 @@ User-facing, visible or impactful patches:
 - Anchor camera to player - Always centers camera around the player including at the world borders. This is disabled by default and can be enabled in the settings in-game.
 - Sheet Music Audio & Render syncronization - Fixes sheet music audio lagging behind visuals.
 - High Resolution (improved) Inventory Scaling - Changes the inventory scaling past 1080p to take 1080p as a reference point and scale against it, useful for 1440p/2K/4K displays
+- Legacy Lock Borders - Allows you to revert to 2013-2015 lock blue item borders.
 
 
 User-facing patches that don't really impact your gameplay or are made for experimenting:

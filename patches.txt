@@ -121,3 +121,6 @@ Adjusts inventory scaling on resolutions above 1080p to scale against 1080p rath
 
 Skips the "Please wait..." screen when buying packs if enabled.
 +skip_store_confirm
+
+Allows you to toggle between orange and old blue lock item borders.
++legacy_lock_borders

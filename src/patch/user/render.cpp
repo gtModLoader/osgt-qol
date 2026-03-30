@@ -3310,3 +3310,62 @@ int Buildomatica::m_toggleKey;
 int Buildomatica::m_reloadKey;
 int Buildomatica::m_overlayObtrusiveness;
 REGISTER_USER_GAME_PATCH(Buildomatica, buildomatica);
+
+REGISTER_GAME_FUNCTION(GetItemBoxColorFromItemInfo, "48 63 41 04 3D 81 00 00 00 77 3F 48 8D", __fastcall, int,
+                       ItemInfo*);
+REGISTER_GAME_FUNCTION(GetPickupBoxFrameFromItemInfo, "48 63 41 04 83 F8 1C 77 39 48 8D", __fastcall, int, ItemInfo*);
+class LegacyLockBorders : public patch::BasePatch
+{
+  public:
+    void apply() const override
+    {
+        // This patch restores the blue item box border.
+        auto& game = game::GameHarness::get();
+        game.hookFunctionPatternDirect<GetItemBoxColorFromItemInfo_t>(
+            pattern::GetItemBoxColorFromItemInfo, GetItemBoxColorFromItemInfo, &real::GetItemBoxColorFromItemInfo);
+        game.hookFunctionPatternDirect<GetPickupBoxFrameFromItemInfo_t>(pattern::GetPickupBoxFrameFromItemInfo,
+                                                                        GetPickupBoxFrameFromItemInfo,
+                                                                        &real::GetPickupBoxFrameFromItemInfo);
+
+        Variant* pVariant = real::GetApp()->GetVar("osgt_qol_legacy_lockborder");
+        if (pVariant->GetType() != Variant::TYPE_UINT32)
+            pVariant->Set(0);
+        else
+            m_bEnabled = pVariant->GetUINT32();
+
+        auto& optionsMgr = game::OptionsManager::get();
+        optionsMgr.addCheckboxOption("qol", "UI", "osgt_qol_legacy_lockborder", "Restore blue lock borders",
+                                     &LockBorderToggle);
+    }
+
+    static void LockBorderToggle(VariantList* pVariant)
+    {
+        Entity* pCheckbox = pVariant->Get(1).GetEntity();
+        bool bChecked = pCheckbox->GetVar("checked")->GetUINT32() != 0;
+        m_bEnabled = bChecked;
+        real::GetApp()->GetVar("osgt_qol_legacy_lockborder")->Set(uint32_t(bChecked));
+    }
+
+    static int GetItemBoxColorFromItemInfo(ItemInfo* pInfo)
+    {
+        if (!m_bEnabled)
+            return real::GetItemBoxColorFromItemInfo(pInfo);
+        if (!pInfo || pInfo->m_type == 3)
+            return 0;
+        return real::GetItemBoxColorFromItemInfo(pInfo);
+    }
+
+    static int GetPickupBoxFrameFromItemInfo(ItemInfo* pInfo)
+    {
+        if (!m_bEnabled)
+            return real::GetPickupBoxFrameFromItemInfo(pInfo);
+        if (pInfo->m_type == 3)
+            return 0;
+        return real::GetPickupBoxFrameFromItemInfo(pInfo);
+    }
+
+  private:
+    static bool m_bEnabled;
+};
+bool LegacyLockBorders::m_bEnabled = false;
+REGISTER_USER_GAME_PATCH(LegacyLockBorders, legacy_lock_borders);
