@@ -3369,3 +3369,80 @@ class LegacyLockBorders : public patch::BasePatch
 };
 bool LegacyLockBorders::m_bEnabled = false;
 REGISTER_USER_GAME_PATCH(LegacyLockBorders, legacy_lock_borders);
+
+class LegacyShadows : public patch::BasePatch
+{
+  public:
+    void apply() const override
+    {
+        // A fully reversible patch that allows you to toggle between legacy shadows (2012-2015) and modern shadows on
+        // the go. Legacy shadows used to cast to the right (towards the sun), modern shadows cast to the left (away
+        // from sun).
+        auto& game = game::GameHarness::get();
+
+        m_tileShadowsAddr = game.findMemoryPattern<uint8_t*>(
+            "F3 41 0F 5C C9 03 C8 29 ? ? ? ? ? F3 0F 11 44 24 44 F3 0F 11 4C 24 40 E8");
+        m_objectShadowsAddr = game.findMemoryPattern<uint8_t*>(
+            "C7 84 24 10 01 00 00 00 00 80 40 F3 0F 58 C7 F3 0F 11 84 24 14 01 00 00 48 8B 5C 24 78");
+        m_netAvShadowRender =
+            game.findMemoryPattern<uint8_t*>("F3 0F 10 ? ? ? ? ? F3 0F 10 ? ? ? ? ? E8 ? ? ? ? 48 8B 5C 24 60");
+        m_yValueOff = *(int*)(m_netAvShadowRender + 4);
+        m_xValueOff = *(int*)(m_netAvShadowRender + 12);
+
+        Variant* pVariant = real::GetApp()->GetVar("osgt_qol_legacy_shadows");
+        if (pVariant->GetType() != Variant::TYPE_UINT32)
+            pVariant->Set(0);
+        else if (pVariant->GetUINT32() == 1)
+            patch();
+
+        auto& optionsMgr = game::OptionsManager::get();
+        optionsMgr.addCheckboxOption("qol", "Render", "osgt_qol_legacy_shadows", "Use legacy shadows (2012-2015)",
+                                     &LegacyShadowToggle);
+    }
+
+    static void LegacyShadowToggle(VariantList* pVariant)
+    {
+        Entity* pCheckbox = pVariant->Get(1).GetEntity();
+        bool bChecked = pCheckbox->GetVar("checked")->GetUINT32() != 0;
+        real::GetApp()->GetVar("osgt_qol_legacy_shadows")->Set(uint32_t(bChecked));
+        if (bChecked)
+            patch();
+        else
+            unpatch();
+    }
+
+    static void patch()
+    {
+        // DrawTileShadows, change SUBSS to ADDSS.
+        utils::fillMemory(m_tileShadowsAddr + 3, 1, 0x58);
+        // DrawObjectShadows, rewrite a float MOV value from 4 to 12 to match old client.
+        utils::writeMemoryBuffer(m_objectShadowsAddr + 7, {0, 0, 0x40, 0x41});
+        // Rewrite NetAvatar::OnShadowRender's xOff parameter (-4) with the one yOff uses (4) to match old shadow
+        // direction.
+        int newValue = m_yValueOff - 8;
+        utils::writeMemoryBuffer(m_netAvShadowRender + 12, &newValue, 4);
+    }
+
+    static void unpatch()
+    {
+        // DrawTileShadows, return SUBSS to original
+        utils::fillMemory(m_tileShadowsAddr + 3, 1, 0x5C);
+        // DrawObjectShadows, restore original float point value.
+        utils::writeMemoryBuffer(m_objectShadowsAddr + 7, {0, 0, 0x80, 0x40});
+        // Restore NetAvatar::OnShadowRender's xOff parameter to original.
+        utils::writeMemoryBuffer(m_netAvShadowRender + 12, &m_xValueOff, 4);
+    }
+
+  private:
+    static int m_yValueOff;
+    static int m_xValueOff;
+    static uint8_t* m_tileShadowsAddr;
+    static uint8_t* m_objectShadowsAddr;
+    static uint8_t* m_netAvShadowRender;
+};
+int LegacyShadows::m_yValueOff;
+int LegacyShadows::m_xValueOff;
+uint8_t* LegacyShadows::m_tileShadowsAddr;
+uint8_t* LegacyShadows::m_objectShadowsAddr;
+uint8_t* LegacyShadows::m_netAvShadowRender;
+REGISTER_USER_GAME_PATCH(LegacyShadows, legacy_shadows);
