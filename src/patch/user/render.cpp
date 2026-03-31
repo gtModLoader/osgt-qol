@@ -3446,3 +3446,107 @@ uint8_t* LegacyShadows::m_tileShadowsAddr;
 uint8_t* LegacyShadows::m_objectShadowsAddr;
 uint8_t* LegacyShadows::m_netAvShadowRender;
 REGISTER_USER_GAME_PATCH(LegacyShadows, legacy_shadows);
+
+class LegacyWorldSelect : public patch::BasePatch
+{
+  public:
+    void apply() const override
+    {
+        // Restores old margins for the world select screen floaters and also offers to remove the "..." truncation of
+        // world names entirely as it existed back in 2013. This patch is fully reversible without disabling it in
+        // patches.txt.
+        auto& game = game::GameHarness::get();
+
+        // Gather our addresses and copy original assembly where needed.
+        m_floaterNameLimitAddr =
+            game.findMemoryPattern<uint8_t*>("0F 86 ? ? ? ? 45 8D 4D 0A 45 33 C0 48 8D 55 20 49 8B CF");
+        m_floaterSizeAddr =
+            game.findMemoryPattern<uint8_t*>("F3 0F 10 ? ? ? ? ? E8 ? ? ? ? 0F 28 D8 C6 44 24 38 00 C7 44 24 30 01 00 "
+                                             "00 00 F3 44 0F 11 44 24 28 C6 44 24 20 01");
+        memcpy(m_floaterBytes, m_floaterSizeAddr, 16);
+        m_floaterButtonSizeAddr = game.findMemoryPattern<uint8_t*>(
+            "F3 0F 10 ? ? ? ? ? E8 ? ? ? ? 0F 28 D8 C6 44 24 38 00 C7 44 24 30 01 00 00 00 F3 44 0F 11 4C 24 28");
+        memcpy(m_floaterButtonBytes, m_floaterButtonSizeAddr, 16);
+
+        Variant* pVariant = real::GetApp()->GetVar("osgt_qol_legacy_floaters");
+        if (pVariant->GetType() != Variant::TYPE_UINT32)
+            pVariant->Set(0);
+
+        pVariant = real::GetApp()->GetVar("osgt_qol_legacy_floater_names");
+        if (pVariant->GetType() != Variant::TYPE_UINT32)
+            pVariant->Set(0);
+
+        patch();
+
+        auto& optionsMgr = game::OptionsManager::get();
+        optionsMgr.addCheckboxOption("qol", "UI", "osgt_qol_legacy_floaters", "Use old world select button size",
+                                     &ToggleLegacyFloaterPadding);
+        optionsMgr.addCheckboxOption("qol", "UI", "osgt_qol_legacy_floater_names",
+                                     "Don't truncate world name sizes in world select screen",
+                                     &ToggleLegacyFloaterNameLimit);
+    }
+
+    static void ToggleLegacyFloaterNameLimit(VariantList* pVariant)
+    {
+        Entity* pCheckbox = pVariant->Get(1).GetEntity();
+        bool bChecked = pCheckbox->GetVar("checked")->GetUINT32() != 0;
+        real::GetApp()->GetVar("osgt_qol_legacy_floater_names")->Set(uint32_t(bChecked));
+        if (bChecked)
+            patch();
+        else
+            unpatch();
+    }
+
+    static void ToggleLegacyFloaterPadding(VariantList* pVariant)
+    {
+        Entity* pCheckbox = pVariant->Get(1).GetEntity();
+        bool bChecked = pCheckbox->GetVar("checked")->GetUINT32() != 0;
+        real::GetApp()->GetVar("osgt_qol_legacy_floaters")->Set(uint32_t(bChecked));
+        if (bChecked)
+            patch();
+        else
+            unpatch();
+    }
+
+    static void patch()
+    {
+        // Override JBE with JMP on length check.
+        if (real::GetApp()->GetVar("osgt_qol_legacy_floater_names")->GetUINT32() == 1)
+            utils::writeMemoryPattern(m_floaterNameLimitAddr, "90 E9");
+        if (real::GetApp()->GetVar("osgt_qol_legacy_floaters")->GetUINT32() == 1)
+        {
+            // Write following assembly in its place: mov eax, 0x41200000, movd xmm3, eax. This avoids using iPadMapX
+            // value and uses the hardcoded static that old clients used.
+            utils::writeMemoryPattern(m_floaterSizeAddr, "B8 00 00 20 41 66 0F 6E D8");
+            utils::nopMemory(m_floaterSizeAddr + 9, 7);
+            utils::writeMemoryPattern(m_floaterButtonSizeAddr, "B8 00 00 20 41 66 0F 6E D8");
+            utils::nopMemory(m_floaterButtonSizeAddr + 9, 7);
+        }
+    }
+
+    static void unpatch()
+    {
+        // Restore JBE instruction.
+        if (real::GetApp()->GetVar("osgt_qol_legacy_floater_names")->GetUINT32() == 0)
+            utils::writeMemoryPattern(m_floaterNameLimitAddr, "0F 86");
+        if (real::GetApp()->GetVar("osgt_qol_legacy_floaters")->GetUINT32() == 0)
+        {
+            // Copy back the original bytes we saved earlier.
+            utils::writeMemoryBuffer(m_floaterSizeAddr, m_floaterBytes, 16);
+            utils::writeMemoryBuffer(m_floaterButtonSizeAddr, m_floaterButtonBytes, 16);
+        }
+    }
+
+  private:
+    static uint8_t* m_floaterNameLimitAddr;
+    static uint8_t* m_floaterSizeAddr;
+    static uint8_t* m_floaterButtonSizeAddr;
+    static uint8_t m_floaterBytes[16];
+    static uint8_t m_floaterButtonBytes[16];
+};
+uint8_t* LegacyWorldSelect::m_floaterNameLimitAddr;
+uint8_t* LegacyWorldSelect::m_floaterSizeAddr;
+uint8_t* LegacyWorldSelect::m_floaterButtonSizeAddr;
+uint8_t LegacyWorldSelect::m_floaterBytes[16] = {};
+uint8_t LegacyWorldSelect::m_floaterButtonBytes[16] = {};
+REGISTER_USER_GAME_PATCH(LegacyWorldSelect, legacy_world_select);

@@ -127,3 +127,6 @@ Allows you to toggle between orange and old blue lock item borders.
 
 Restores 2012-2015 shadows to the game. Can be toggled ingame.
 +legacy_shadows
+
+Restores old world select screen button sizes and optionally removes the "..." world name truncation
++legacy_world_select
