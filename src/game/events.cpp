@@ -11,7 +11,10 @@ REGISTER_GAME_FUNCTION(OnArcadeInput,
                        void, VariantList*);
 REGISTER_GAME_FUNCTION(AddWASDKeys, "40 55 48 8B EC 48 83 EC 50 F3 0F 10 05 1F 72 22 00 F3 0F 10 0D BF 7C", __fastcall,
                        void);
-
+REGISTER_GAME_FUNCTION(AvatarRenderDataAddClothingParticles, "44 88 4C 24 20 44 88 44 24 18 88 54 24 10 55 56 57",
+                       __fastcall, void, void*, bool, bool, bool, bool);
+REGISTER_GAME_FUNCTION(ParticleSystemAdd, "48 8B C4 F3 0F 11 58 20 F3 0F 11 50 18 89 50 10 55", __fastcall, void, void*,
+                       int, float, float, float, float, float, int);
 // GetArcadeComponent
 // Returns: ArcadeComponent* (derived from EntityComponent)
 REGISTER_GAME_FUNCTION(GetArcadeComponent, "E8 ? ? ? ? 48 8B C8 45 33 C9 44 0F B6 C3 33 D2 E8 ? ? ? ?", __fastcall,
@@ -57,6 +60,8 @@ void game::EventsAPI::initialize()
     real::GetGamepadManager =
         utils::resolveRelativeCall<GetGamepadManager_t>(game.findMemoryPattern<uint8_t*>(pattern::GetGamepadManager));
 
+    real::ParticleSystemAdd = game.findMemoryPattern<ParticleSystemAdd_t>(pattern::ParticleSystemAdd);
+
     // Hook.
     game.hookFunctionPatternDirect<NetControllerLocalOnArcadeInput_t>(pattern::NetControllerLocalOnArcadeInput,
                                                                       NetControllerLocalOnArcadeInput,
@@ -68,6 +73,9 @@ void game::EventsAPI::initialize()
     game.hookFunctionPatternDirect<OnMapLoaded_t>(pattern::OnMapLoaded, OnMapLoaded, &real::OnMapLoaded);
     game.hookFunctionPatternDirect<WorldRendererOnRender_t>(pattern::WorldRendererOnRender, WorldRendererOnRender,
                                                             &real::WorldRendererOnRender);
+    game.hookFunctionPatternDirect<AvatarRenderDataAddClothingParticles_t>(
+        pattern::AvatarRenderDataAddClothingParticles, AvatarRenderDataAddClothingParticles,
+        &real::AvatarRenderDataAddClothingParticles);
 
     m_lastKeycode = 600000;
 }
@@ -110,5 +118,11 @@ void game::EventsAPI::WorldRendererOnRender(void* this_, CL_Vec2f* p2)
     auto& EventsAPI = game::EventsAPI::get();
     (EventsAPI.m_sig_worldRendererOnRender)(this_, p2);
 }
-
+void game::EventsAPI::AvatarRenderDataAddClothingParticles(void* this_, bool iStink, bool fastStink, bool slowStink,
+                                                           bool crazyStink)
+{
+    real::AvatarRenderDataAddClothingParticles(this_, iStink, fastStink, slowStink, crazyStink);
+    auto& EventsAPI = game::EventsAPI::get();
+    (EventsAPI.m_sig_avatarRenderDataAddClothingParticles)(this_, iStink, fastStink, slowStink, crazyStink);
+}
 }; // namespace game

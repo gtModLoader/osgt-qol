@@ -81,6 +81,8 @@ DEFINE_GAME_FUNCTION(AddKeyBinding, __fastcall, void, EntityComponent* pComp, st
                      uint32_t outputcode, bool bAlsoSendAsNormalRawKey, uint32_t modifiersRequired);
 DEFINE_GAME_FUNCTION(GetGamepadManager, __fastcall, GamepadManager*);
 DEFINE_GAME_FUNCTION(WorldRendererOnRender, __fastcall, void, void*, CL_Vec2f*);
+DEFINE_GAME_FUNCTION(AvatarRenderDataAddClothingParticles, __fastcall, void, void*, bool, bool, bool, bool);
+DEFINE_GAME_FUNCTION(ParticleSystemAdd, __fastcall, void, void*, int, float, float, float, float, float, int);
 
 // Declared in weathermanager.cpp
 DEFINE_GAME_FUNCTION(WorldRendererForceBackground, __thiscall, void, uint8_t*, int, void*, void*);

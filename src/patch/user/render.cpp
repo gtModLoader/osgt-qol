@@ -3550,3 +3550,37 @@ uint8_t* LegacyWorldSelect::m_floaterButtonSizeAddr;
 uint8_t LegacyWorldSelect::m_floaterBytes[16] = {};
 uint8_t LegacyWorldSelect::m_floaterButtonBytes[16] = {};
 REGISTER_USER_GAME_PATCH(LegacyWorldSelect, legacy_world_select);
+
+class CustomClothingParticles : public patch::BasePatch
+{
+  public:
+    void apply() const override
+    {
+        // This patch serves to attach any intended particle effects to Oldschool Growtopia's custom items.
+        auto& events = game::EventsAPI::get();
+        events.m_sig_avatarRenderDataAddClothingParticles.connect(&AvatarRenderDataAddClothingParticles);
+    }
+
+    static void AvatarRenderDataAddClothingParticles(void* this_, bool iStink, bool fastStink, bool slowStink,
+                                                     bool crazyStink)
+    {
+        AvatarRenderData* pRenderData = (AvatarRenderData*)this_;
+        // nit: Check all conditions V3.02 hides particles for.
+        if (pRenderData->m_charFlags2 >> 10 & 1)
+            return;
+        if (pRenderData->m_bNoParticles || pRenderData->m_bInvisible)
+            return;
+        // Nightmare Air Robinsons - Added to OSGT November 2026. Add a PE_PURPLE_SPARKLE particle.
+        if (pRenderData->m_pParent->clothingItems[3] == 16114 && iStink)
+        {
+            // nit: replace with Random(3) == 0 or !Random(3)
+            if ((rand() % 3) == 0)
+                real::ParticleSystemAdd(&real::GetApp()->GetGameLogic()->m_pWorldRenderer->m_particles, 107,
+                                        pRenderData->m_pos.x - 8.0f, pRenderData->m_pos.y, 0.0f, 0.0f, 0.0f, 0);
+            if ((rand() % 3) == 0)
+                real::ParticleSystemAdd(&real::GetApp()->GetGameLogic()->m_pWorldRenderer->m_particles, 107,
+                                        pRenderData->m_pos.x + 6.0f, pRenderData->m_pos.y, 0.0f, 0.0f, 0.0f, 0);
+        }
+    }
+};
+REGISTER_USER_GAME_PATCH(CustomClothingParticles, osgt_custom_clothing_particles);

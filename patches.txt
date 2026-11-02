@@ -130,3 +130,6 @@ Restores 2012-2015 shadows to the game. Can be toggled ingame.
 
 Restores old world select screen button sizes and optionally removes the "..." world name truncation
 +legacy_world_select
+
+Adds OSGT-specific particles to items.
++osgt_custom_clothing_particles
