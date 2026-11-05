@@ -10,6 +10,9 @@ OSGT-QOL is a quality of life mod for Growtopia 3.02 64-bit Windows clients aime
 > [!NOTE]
 > The game modification is provided as a working prototype. The core maintainers of the project are working on a rewrite in another repository. Contributions are still very much welcome, things done here will be relevant for the rewrite.
 
+> [!NOTE]
+> For people looking to develop or contribute, Microsoft Visual Studio 2026 can't be used for this project due to removal of the `hash_map` header in toolset version 14.51. The maintainers have worked on the project using Microsoft Visual Studio 2022 and it has proven to work with that.
+
 ## Table of Contents
 - [Cache and save.dat separation](#cache-and-savedat-separation)
 - [Installation](#installation)
